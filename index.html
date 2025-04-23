@@ -194,7 +194,6 @@
                 selectedShip = index;
             }
             div.addEventListener('click', selectShip);
-            div.addEventListener('touchstart', function(e) { selectShip(); e.preventDefault(); }, {passive: false});
             shipSelection.appendChild(div);
         });
 
@@ -208,7 +207,6 @@
                 selectedColor = color;
             }
             div.addEventListener('click', selectColor);
-            div.addEventListener('touchstart', function(e) { selectColor(); e.preventDefault(); }, {passive: false});
             colorSelection.appendChild(div);
         });
 
@@ -262,8 +260,11 @@
                 alert('Please generate a code or join a game first!');
             }
         }
-        enterButton.addEventListener('click', triggerEnter);
-        enterButton.addEventListener('touchstart', function(e) { triggerEnter(); e.preventDefault(); }, {passive: false});
+        enterButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            triggerEnter();
+        });
 
         resumeButton.addEventListener('click', () => togglePause(false));
         quitButton.addEventListener('click', () => {
