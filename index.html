@@ -54,6 +54,45 @@
         }
         /* Safe area for notched devices */
         body { padding-top: env(safe-area-inset-top,0); padding-bottom: env(safe-area-inset-bottom,0); padding-left: env(safe-area-inset-left,0); padding-right: env(safe-area-inset-right,0); }
+        /* --- Touch Controls Layout --- */
+        #joystick-left-container, #joystick-right-container {
+            position: absolute;
+            bottom: 30px;
+            z-index: 12;
+        }
+        #joystick-left-container {
+            left: 30px;
+        }
+        #joystick-right-container {
+            right: 30px;
+        }
+        .joystick {
+            width: 90px; height: 90px;
+            background: radial-gradient(circle, rgba(0,212,255,0.25), rgba(0,0,50,0.5));
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00d4ff;
+            position: relative;
+            touch-action: none;
+        }
+        #touch-buttons {
+            position: absolute;
+            right: 30px;
+            bottom: 130px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 13;
+        }
+        .touch-btn {
+            width: 72px; height: 48px;
+            background: linear-gradient(45deg, #00d4ff, #ff00ff);
+            color: #fff; border: none; border-radius: 8px;
+            font-size: 1.1rem;
+            box-shadow: 0 0 10px #00d4ff;
+            text-shadow: 0 0 3px #ff00ff;
+            margin-bottom: 6px;
+        }
+        .touch-btn:active { background: linear-gradient(45deg, #ff00ff, #00d4ff); }
     </style>
 </head>
 <body>
@@ -87,6 +126,19 @@
         W/S: Thrust forward/back (Double-tap W for warp) | A/D: Strafe | P: Pause | Esc: Quit | G: Shoot | Joystick/Mouse: Look | Arrow keys: Rotate | +/-: Zoom | Space: Up (3s+ to blast) | Shift: Down | R: Toggle Race
     </div>
     <canvas id="canvas"></canvas>
+    <div id="joystick-left-container">
+        <div id="joystick-left" class="joystick"></div>
+    </div>
+    <div id="joystick-right-container">
+        <div id="joystick-right" class="joystick"></div>
+    </div>
+    <div id="touch-buttons">
+        <button class="touch-btn" id="btn-shoot">Shoot</button>
+        <button class="touch-btn" id="btn-jump">Up</button>
+        <button class="touch-btn" id="btn-down">Down</button>
+        <button class="touch-btn" id="btn-boost">Boost</button>
+        <button class="touch-btn" id="btn-pause">Pause</button>
+    </div>
     <div id="joystick-container">
         <div id="joystick"></div>
     </div>
@@ -1069,6 +1121,83 @@
                 ground.geometry.attributes.color.needsUpdate = true;
             }
         }
+    </script>
+    <script>
+        // --- Touch Device Detection ---
+        function isTouchDevice() {
+            return (('ontouchstart' in window) || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0);
+        }
+        function showTouchUI() {
+            if (isTouchDevice()) {
+                document.querySelectorAll('.touch-only').forEach(el => el.style.display = 'block');
+            }
+        }
+        window.addEventListener('DOMContentLoaded', showTouchUI);
+        // --- Dual Joystick Implementation ---
+        let leftJoystick = document.getElementById('joystick-left');
+        let rightJoystick = document.getElementById('joystick-right');
+        let leftActive = false, rightActive = false, leftStart = {}, rightStart = {}, leftDelta = {x:0,y:0}, rightDelta = {x:0,y:0};
+        
+        // LEFT JOYSTICK: STRICTLY FOR MOVEMENT (WASD)
+        // This joystick ONLY affects movement keys. It does NOT touch camera variables.
+        if (leftJoystick) {
+            leftJoystick.addEventListener('pointerdown', function(e) {
+                leftActive = true;
+                leftStart = {x: e.clientX, y: e.clientY};
+                e.preventDefault();
+            }, {passive: false});
+            leftJoystick.addEventListener('pointermove', function(e) {
+                if (!leftActive) return;
+                leftDelta = { x: e.clientX - leftStart.x, y: e.clientY - leftStart.y };
+                // Only control WASD keys
+                keys.w = leftDelta.y < -20;
+                keys.s = leftDelta.y > 20;
+                keys.a = leftDelta.x < -20;
+                keys.d = leftDelta.x > 20;
+                e.preventDefault();
+            }, {passive: false});
+            leftJoystick.addEventListener('pointerup', function(e) {
+                leftActive = false;
+                leftDelta = {x:0,y:0};
+                keys.w = keys.a = keys.s = keys.d = false;
+                e.preventDefault();
+            }, {passive: false});
+        }
+
+        // RIGHT JOYSTICK: STRICTLY FOR CAMERA CONTROL
+        // This joystick ONLY affects camera orientation (targetLon/targetLat). It does NOT affect movement keys.
+        if (rightJoystick) {
+            rightJoystick.addEventListener('pointerdown', function(e) {
+                rightActive = true;
+                rightStart = {x: e.clientX, y: e.clientY};
+                e.preventDefault();
+            }, {passive: false});
+            rightJoystick.addEventListener('pointermove', function(e) {
+                if (!rightActive) return;
+                rightDelta = { x: e.clientX - rightStart.x, y: e.clientY - rightStart.y };
+                // Only control camera orientation
+                targetLon += rightDelta.x * 0.15;
+                targetLat += rightDelta.y * 0.15;
+                rightStart = {x: e.clientX, y: e.clientY};
+                e.preventDefault();
+            }, {passive: false});
+            rightJoystick.addEventListener('pointerup', function(e) {
+                rightActive = false;
+                rightDelta = {x:0,y:0};
+                e.preventDefault();
+            }, {passive: false});
+        }
+        // --- Touch Buttons Mapping ---
+        document.getElementById('btn-shoot').addEventListener('pointerdown', function(e){ keys.g = true; e.preventDefault(); });
+        document.getElementById('btn-shoot').addEventListener('pointerup', function(e){ keys.g = false; e.preventDefault(); });
+        document.getElementById('btn-jump').addEventListener('pointerdown', function(e){ keys.space = true; e.preventDefault(); });
+        document.getElementById('btn-jump').addEventListener('pointerup', function(e){ keys.space = false; e.preventDefault(); });
+        document.getElementById('btn-down').addEventListener('pointerdown', function(e){ keys.shift = true; e.preventDefault(); });
+        document.getElementById('btn-down').addEventListener('pointerup', function(e){ keys.shift = false; e.preventDefault(); });
+        document.getElementById('btn-boost').addEventListener('pointerdown', function(e){ keys.w = true; e.preventDefault(); });
+        document.getElementById('btn-boost').addEventListener('pointerup', function(e){ keys.w = false; e.preventDefault(); });
+        document.getElementById('btn-pause').addEventListener('pointerdown', function(e){ keys.p = true; e.preventDefault(); });
+        document.getElementById('btn-pause').addEventListener('pointerup', function(e){ keys.p = false; e.preventDefault(); });
     </script>
     <script>
         // --- Responsive Canvas Resize ---
