@@ -424,11 +424,23 @@
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 4000);
             camera.position.set(0, 10, 15);
 
-            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-            renderer.setPixelRatio(window.devicePixelRatio);
+            // Mobile-optimized renderer settings
+            renderer = new THREE.WebGLRenderer({ 
+                canvas, 
+                antialias: !isMobileDevice(), // Disable antialiasing on mobile
+                powerPreference: "low-power", // Prefer power saving over performance
+                precision: isMobileDevice() ? "lowp" : "highp" // Use low precision on mobile
+            });
+            
+            // Set pixel ratio with a cap for mobile devices
+            const maxPixelRatio = isMobileDevice() ? 2 : window.devicePixelRatio;
+            renderer.setPixelRatio(Math.min(maxPixelRatio, window.devicePixelRatio || 1));
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            // Optimize shadow settings for mobile
+            renderer.shadowMap.enabled = !isMobileDevice();
+            renderer.shadowMap.autoUpdate = false; // Disable automatic shadow updates
+            renderer.shadowMap.type = THREE.BasicShadowMap; // Use basic shadows for better performance
 
             maxSpeed = ships[selectedShip].speed;
             createCosmicSky();
@@ -441,6 +453,12 @@
             if (isHost && gameMode === 'multiplayer') createRaceFinishLine();
             setupJoystick();
             setupControls();
+
+            // Optimize for mobile
+            if (isMobileDevice()) {
+                scene.fog = new THREE.Fog(0x000000, 100, 1000); // Add fog for performance
+                renderer.setClearColor(0x000000); // Set black background
+            }
 
             window.addEventListener('resize', onWindowResize);
             document.addEventListener('pointerdown', onPointerDown);
@@ -1045,13 +1063,19 @@
         }
 
         function isLowEndDevice() {
-            return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+            return true; // Treat all mobile devices as low-end for safety
         }
 
         // Initialize with appropriate settings based on device
-        let PARTICLE_COUNT = isLowEndDevice() ? 400 : 2000;
-        let MAX_NPC_SHIPS = isLowEndDevice() ? 4 : 8;
-        let MAX_OBSTACLES = isLowEndDevice() ? 5 : 10;
+        let PARTICLE_COUNT = isMobileDevice() ? 100 : 2000; // Drastically reduced from 400
+        let MAX_NPC_SHIPS = isMobileDevice() ? 2 : 8; // Reduced from 4
+        let MAX_OBSTACLES = isMobileDevice() ? 3 : 10; // Reduced from 5
+
+        // Additional mobile optimizations
+        if (isMobileDevice()) {
+            THREE.ShaderMaterial.prototype.precision = 'lowp'; // Use low precision shaders
+            THREE.WebGLRenderer.prototype.antialias = false; // Disable antialiasing
+        }
 
         // --- Touch Controls Implementation ---
         function setupMobileControls() {
