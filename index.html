@@ -671,8 +671,53 @@
                 }
             } else {
                 // Desktop controls update
-                // ... existing desktop control code ...
+                if (keys.w) {
+                    const now = performance.now();
+                    if (now - lastWTime < 300) wTapCount++;
+                    else wTapCount = 1;
+                    lastWTime = now;
+                    
+                    if (wTapCount === 2) {
+                        velocity.z = -blastSpeed;
+                        wTapCount = 0;
+                    } else {
+                        velocity.z -= baseAccel;
+                    }
+                }
+                if (keys.s) velocity.z += baseAccel;
+                if (keys.a) velocity.x -= baseAccel;
+                if (keys.d) velocity.x += baseAccel;
+                if (keys.space) {
+                    spaceHoldTime += delta;
+                    if (spaceHoldTime > 3) {
+                        velocity.y = blastSpeed;
+                        spaceHoldTime = 0;
+                    } else {
+                        velocity.y -= liftSpeed;
+                    }
+                } else {
+                    spaceHoldTime = 0;
+                }
+                if (keys.shift) velocity.y += verticalSpeed;
             }
+
+            // Apply friction and limit speed
+            velocity.multiplyScalar(friction);
+            if (velocity.length() > maxSpeed) {
+                velocity.normalize().multiplyScalar(maxSpeed);
+            }
+
+            // Update ship position
+            ship.position.add(velocity);
+
+            // Update camera
+            const targetPosition = new THREE.Vector3(
+                ship.position.x,
+                ship.position.y + cameraHeight,
+                ship.position.z + cameraDistance
+            );
+            camera.position.lerp(targetPosition, 0.1);
+            camera.lookAt(ship.position);
 
             // Optimize particle updates
             if (particles) {
@@ -690,8 +735,29 @@
             const updateInterval = isMobileDevice() ? 2 : 1; // Update NPCs less frequently on mobile
             if (time % updateInterval < delta) {
                 npcShips.forEach(npc => {
-                    // ... existing NPC update code ...
+                    npc.rotation.y += delta * 0.5;
+                    npc.position.y += Math.sin(time + npc.position.x) * delta;
                 });
+            }
+
+            // Update waterfalls
+            waterfalls.forEach(waterfall => {
+                waterfall.material.uniforms.time.value += delta;
+            });
+
+            // Update fog
+            if (fogParticles) {
+                fogParticles.rotation.y += delta * 0.02;
+            }
+
+            // Check race finish line
+            if (isRaceMode && raceFinishLine) {
+                const distance = ship.position.distanceTo(raceFinishLine.position);
+                if (distance < 30) {
+                    const raceTime = (performance.now() - raceStartTime) / 1000;
+                    raceStatus.innerText = `Race Complete! Time: ${raceTime.toFixed(2)}s`;
+                    isRaceMode = false;
+                }
             }
 
             // Only update shadows when necessary
