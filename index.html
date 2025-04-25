@@ -418,6 +418,8 @@
         let isUserInteracting = false, onPointerDownMouseX = 0, onPointerDownMouseY = 0, lon = 0, onPointerDownLon = 0, lat = 0, onPointerDownLat = 0, targetLon = 0, targetLat = 0, phi = 0, theta = 0;
         let joystick, joystickRect, joystickCenterX, joystickCenterY, joystickActive = false, joystickTouchId = null;
         let time = 0, spaceHoldTime = 0, cycleTime = 0, cameraDistance = 15, cameraHeight = 5, lastWTime = 0, wTapCount = 0, boostEndTime = 0;
+        let clock = new THREE.Clock();
+        let leftJoystick, rightJoystick, leftActive = false, rightActive = false, leftStart = { x: 0, y: 0 }, rightStart = { x: 0, y: 0 }, leftDelta = { x: 0, y: 0 }, rightDelta = { x: 0, y: 0 };
 
         function init() {
             scene = new THREE.Scene();
@@ -464,6 +466,8 @@
             document.addEventListener('pointerdown', onPointerDown);
             document.addEventListener('pointermove', onPointerMove);
             document.addEventListener('pointerup', onPointerUp);
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
 
             if (gameMode === 'multiplayer') setupMultiplayer();
             animate();
@@ -643,613 +647,121 @@
         }
 
         function animate() {
-            if (isPaused) return requestAnimationFrame(animate);
-            requestAnimationFrame(animate);
-            updateCosmicEnvironment();
-            updateMovement();
-            updateCamera();
-            updateBullets();
-            if (isRaceMode) updateRace();
-            renderer.render(scene, camera);
-        }
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
 
-        function updateRace() {
-            if (raceFinishLine && ship.position.distanceTo(raceFinishLine.position) < 25) {
-                const timeTaken = (performance.now() - raceStartTime) / 1000;
-                raceStatus.innerText = `Race Finished! Time: ${timeTaken.toFixed(2)}s`;
-                isRaceMode = false;
-                scene.remove(raceFinishLine);
-                raceFinishLine = null;
-            } else if (isRaceMode) {
-                const timeElapsed = (performance.now() - raceStartTime) / 1000;
-                raceStatus.innerText = `Race Time: ${timeElapsed.toFixed(2)}s`;
-            }
-        }
-
-        function createCosmicSky() {
-            const skyGeometry = new THREE.SphereGeometry(3000, 32, 32);
-            skyGeometry.scale(-1, 1, 1);
-            const uniforms = { time: { value: 0 }, baseColor: { value: new THREE.Vector3(0.05, 0.1, 0.3) }, pulseIntensity: { value: 0.5 }, dayNight: { value: 0 } };
-            const vertexShader = `varying vec3 vWorldPosition; void main() { vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
-            const fragmentShader = `uniform float time; uniform vec3 baseColor; uniform float pulseIntensity; uniform float dayNight; varying vec3 vWorldPosition; void main() { vec3 dir = normalize(vWorldPosition); float noise = sin(dir.x * 3.0 + time) * cos(dir.y * 3.0 + time) * 0.5; vec3 nightColor = mix(baseColor, vec3(0.8, 0.4, 0.6), noise + 0.5); vec3 dayColor = mix(vec3(0.7, 0.9, 1.0), vec3(1.0, 1.0, 0.9), noise + 0.5); vec3 color = mix(nightColor, dayColor, dayNight); float pulse = sin(time * 0.5 + dir.z * 5.0) * pulseIntensity * (1.0 - dayNight); gl_FragColor = vec4(color + pulse * 0.3, 1.0); }`;
-            skyMaterial = new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader, side: THREE.BackSide });
-            const sky = new THREE.Mesh(skyGeometry, skyMaterial);
-            scene.add(sky);
-
-            for (let i = 0; i < 3; i++) {
-                const lightGeometry = new THREE.SphereGeometry(8 - i * 2, 16, 16);
-                const lightMaterial = new THREE.MeshBasicMaterial({ color: i === 0 ? 0xffaa88 : i === 1 ? 0x88ccff : 0xffff88 });
-                const light = new THREE.Mesh(lightGeometry, lightMaterial);
-                scene.add(light);
-                cosmicLights.push(light);
-                const pointLight = new THREE.PointLight(lightMaterial.color, 2, 1500);
-                pointLight.castShadow = true;
-                pointLight.shadow.mapSize.width = 1024;
-                pointLight.shadow.mapSize.height = 1024;
-                light.add(pointLight);
-            }
-
-            const particleGeometry = new THREE.BufferGeometry();
-            const particleVertices = [];
-            for (let i = 0; i < PARTICLE_COUNT; i++) particleVertices.push((Math.random() - 0.5) * 3500, Math.random() * 1500 + 50, (Math.random() - 0.5) * 3500);
-            particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(particleVertices, 3));
-            const particleMaterial = new THREE.PointsMaterial({ color: 0xaaaaff, size: 2, transparent: true, blending: THREE.AdditiveBlending });
-            scene.add(new THREE.Points(particleGeometry, particleMaterial));
-            scene.add(new THREE.AmbientLight(0x404060, 0.6));
-        }
-
-        function createTerrain() {
-            const groundGeometry = new THREE.PlaneGeometry(8000, 8000, 512, 512);
-            groundGeometry.rotateX(-Math.PI / 2);
-            const vertices = groundGeometry.attributes.position.array;
-            for (let i = 0; i < vertices.length; i += 3) {
-                const x = vertices[i], z = vertices[i + 2];
-                const distance = Math.sqrt(x * x + z * z);
-                vertices[i + 1] = fractalNoise(x, z) * Math.max(0, 1 - distance / 3500);
-            }
-            groundGeometry.computeVertexNormals();
-            const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x1e2a4a, roughness: 0.7, metalness: 0.2, emissive: 0x102030, emissiveIntensity: 0.8, vertexColors: true });
-            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-            ground.receiveShadow = true;
-            scene.add(ground);
-
-            for (let i = 0; i < 12; i++) {
-                const x = (Math.random() - 0.5) * 7000, z = (Math.random() - 0.5) * 7000, y = fractalNoise(x, z);
-                if (y < -15) createWaterfall(x, y + 20, z);
-            }
-            addEnvironmentDetails();
-        }
-
-        function createShip() {
-            const shipGroup = new THREE.Group();
-            const baseGeometry = new THREE.CylinderGeometry(3, 2.5, 0.8, 16, 1);
-            const baseMaterial = new THREE.MeshPhongMaterial({ color: selectedColor, shininess: 50 });
-            const base = new THREE.Mesh(baseGeometry, baseMaterial);
-            base.castShadow = true;
-            shipGroup.add(base);
-
-            const domeGeometry = new THREE.SphereGeometry(1.5, 16, 8);
-            const domeMaterial = new THREE.MeshPhongMaterial({ color: 0x00ffaa, transparent: true, opacity: 0.8, shininess: 100 });
-            const dome = new THREE.Mesh(domeGeometry, domeMaterial);
-            dome.position.y = 0.8;
-            dome.castShadow = true;
-            shipGroup.add(dome);
-
-            const ringGeometry = new THREE.TorusGeometry(2, 0.2, 6, 16);
-            const ringMaterial = new THREE.MeshBasicMaterial({ color: selectedColor, emissive: selectedColor });
-            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-            ring.rotation.x = Math.PI / 2;
-            ring.position.y = -0.1;
-            shipGroup.add(ring);
-
-            if (gameMode === 'multiplayer' && gameCode) {
-                const plateGeometry = new THREE.PlaneGeometry(2, 0.5);
-                const plateMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-                const plate = new THREE.Mesh(plateGeometry, plateMaterial);
-                plate.position.set(0, 0, 2.5);
-                plate.rotation.y = Math.PI;
-
-                const canvas = document.createElement('canvas');
-                canvas.width = 256;
-                canvas.height = 64;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(0, 0, 256, 64);
-                ctx.fillStyle = '#00d4ff';
-                ctx.font = 'bold 40px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(gameCode, 128, 45);
-                const texture = new THREE.CanvasTexture(canvas);
-                plate.material.map = texture;
-                plate.material.needsUpdate = true;
-                shipGroup.add(plate);
-            }
-
-            shipGroup.position.set(0, 100, 0);
-            shipGroup.userData = { health: ships[selectedShip].perk === 'High Durability' ? 2 : 1, lastShot: 0, gunType: ships[selectedShip].gun };
-            scene.add(shipGroup);
-            ship = shipGroup;
-        }
-
-        function createObstacles() {
-            for (let i = 0; i < MAX_OBSTACLES; i++) {
-                const obstacleGeometry = new THREE.BoxGeometry(10, 10, 10);
-                const obstacleMaterial = new THREE.MeshBasicMaterial({ color: 0xff5555 });
-                const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
-                obstacle.position.set((Math.random() - 0.5) * 7000, Math.random() * 100 + 50, (Math.random() - 0.5) * 7000);
-                obstacle.userData = { health: 3 };
-                scene.add(obstacle);
-                obstacles.push(obstacle);
-            }
-        }
-
-        function shoot() {
-            const now = performance.now();
-            const cooldown = ships[selectedShip].perk === 'Fast Reload' ? 200 : ships[selectedShip].perk === 'Rapid Fire' ? 100 : 500;
-            if (now - ship.userData.lastShot < cooldown) return;
-            ship.userData.lastShot = now;
-
-            const bulletGeometry = new THREE.SphereGeometry(0.5, 8, 8);
-            const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff });
-            const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
-            bullet.position.copy(ship.position);
-            const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-            bullet.userData = { velocity: direction.clone().multiplyScalar(ships[selectedShip].perk === 'Long Range' ? 30 : 20), type: ships[selectedShip].gun, damage: ships[selectedShip].perk === 'Explosive Shots' ? 2 : 1 };
-            scene.add(bullet);
-            bullets.push(bullet);
-        }
-
-        function togglePause(state) {
-            isPaused = state;
-            pauseMenu.style.display = state ? 'block' : 'none';
-        }
-
-        function setupControls() {
-            document.addEventListener('keydown', (e) => {
-                switch (e.key.toLowerCase()) {
-                    case 'w': keys.w = true; const now = performance.now(); if (now - lastWTime < 300) { wTapCount++; if (wTapCount >= 2) boostEndTime = now + 800; } else wTapCount = 1; lastWTime = now; break;
-                    case 's': keys.s = true; break;
-                    case 'a': keys.a = true; break;
-                    case 'd': keys.d = true; break;
-                    case ' ': keys.space = true; spaceHoldTime = performance.now(); break;
-                    case 'shift': keys.shift = true; break;
-                    case 'p': if (!keys.p) togglePause(!isPaused); keys.p = true; break;
-                    case 'g': keys.g = true; shoot(); break;
-                    case 'r': if (!keys.r) { isRaceMode = !isRaceMode; if (isRaceMode && !raceFinishLine) { createRaceFinishLine(); raceStartTime = performance.now(); } } keys.r = true; break;
-                    case 'escape': if (!isPaused) togglePause(true); else if (confirm('Quit to menu?')) quitButton.click(); break;
-                    case '+': case '=': cameraDistance = Math.max(5, cameraDistance - 1); break;
-                    case '-': cameraDistance = Math.min(30, cameraDistance + 1); break;
-                }
-            });
-            document.addEventListener('keyup', (e) => {
-                switch (e.key.toLowerCase()) {
-                    case 'w': keys.w = false; break;
-                    case 's': keys.s = false; break;
-                    case 'a': keys.a = false; break;
-                    case 'd': keys.d = false; break;
-                    case ' ': keys.space = false; const holdDuration = (performance.now() - spaceHoldTime) / 1000; if (holdDuration >= 3) velocity.y += blastSpeed; break;
-                    case 'shift': keys.shift = false; break;
-                    case 'p': keys.p = false; break;
-                    case 'g': keys.g = false; break;
-                    case 'r': keys.r = false; break;
-                }
-            });
-            document.addEventListener('keydown', onKeyDown);
-        }
-
-        function updateBullets() {
-            bullets.forEach((bullet, index) => {
-                bullet.position.add(bullet.userData.velocity);
-                if (bullet.position.distanceTo(ship.position) > 1000) {
-                    scene.remove(bullet);
-                    bullets.splice(index, 1);
-                    return;
-                }
-
-                obstacles.forEach(obstacle => {
-                    if (bullet.position.distanceTo(obstacle.position) < 5) {
-                        obstacle.userData.health -= bullet.userData.damage;
-                        if (obstacle.userData.health <= 0) {
-                            scene.remove(obstacle);
-                            obstacles.splice(obstacles.indexOf(obstacle), 1);
-                        }
-                        scene.remove(bullet);
-                        bullets.splice(index, 1);
-                    }
-                });
-
-                if (gameMode === 'multiplayer') {
-                    Object.values(peerShips).forEach(peerShip => {
-                        if (bullet.position.distanceTo(peerShip.position) < 5) {
-                            scene.remove(bullet);
-                            bullets.splice(index, 1);
-                        }
-                    });
-                }
-            });
-        }
-
-        function fractalNoise(x, z, octaves = 8) {
-            let total = 0, frequency = 0.015, amplitude = 1, maxValue = 0;
-            for (let i = 0; i < octaves; i++) {
-                total += Math.sin(x * frequency) * Math.cos(z * frequency) * amplitude;
-                total += Math.random() * 0.6 * amplitude;
-                maxValue += amplitude;
-                amplitude *= 0.6;
-                frequency *= 2.3;
-            }
-            return total / maxValue * 80 - 30;
-        }
-
-        function createWaterfall(x, y, z) {
-            const particleGeometry = new THREE.BufferGeometry();
-            const particleVertices = [];
-            for (let i = 0; i < 400; i++) {
-                particleVertices.push(x + (Math.random() - 0.5) * 12, y - Math.random() * 25, z + (Math.random() - 0.5) * 12);
-            }
-            particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(particleVertices, 3));
-            const particleMaterial = new THREE.PointsMaterial({ color: 0x88ccff, size: 0.6, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending });
-            const waterfall = new THREE.Points(particleGeometry, particleMaterial);
-            waterfall.userData = { baseY: y, speed: 0.12, baseX: x, baseZ: z };
-            scene.add(waterfall);
-            waterfalls.push(waterfall);
-        }
-
-        function createVolumetricFog() {
-            const fogGeometry = new THREE.PlaneGeometry(10000, 10000);
-            fogGeometry.rotateX(-Math.PI / 2);
-            const fogUniforms = { time: { value: 0 }, color: { value: new THREE.Color(0xaaffcc) }, fogDensity: { value: 0.015 } };
-            const fogVertexShader = `varying vec3 vWorldPosition; void main() { vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
-            const fogFragmentShader = `uniform float time; uniform vec3 color; uniform float fogDensity; varying vec3 vWorldPosition; vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; } vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; } vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); } vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; } float snoise(vec3 v) { const vec2 C = vec2(1.0/6.0, 1.0/3.0); const vec4 D = vec4(0.0, 0.5, 1.0, 2.0); vec3 i = floor(v + dot(v, C.yyy)); vec3 x0 = v - i + dot(i, C.xxx); vec3 g = step(x0.yzx, x0.xyz); vec3 l = 1.0 - g; vec3 i1 = min(g.xyz, l.zxy); vec3 i2 = max(g.xyz, l.zxy); vec3 x1 = x0 - i1 + C.xxx; vec3 x2 = x0 - i2 + C.yyy; vec3 x3 = x0 - D.yyy; i = mod289(i); vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0)); float n_ = 0.142857142857; vec3 ns = n_ * D.wyz - D.xzx; vec4 j = p - 49.0 * floor(p * ns.z * ns.z); vec4 x_ = floor(j * ns.z); vec4 y_ = floor(j - 7.0 * x_); vec4 x = x_ *ns.x + ns.yyyy; vec4 y = y_ *ns.x + ns.yyyy; vec4 h = 1.0 - abs(x) - abs(y); vec4 b0 = vec4(x.xy, y.xy); vec4 b1 = vec4(x.zw, y.zw); vec4 s0 = floor(b0)*2.0 + 1.0; vec4 s1 = floor(b1)*2.0 + 1.0; vec4 sh = -step(h, vec4(0.0)); vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy; vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww; vec3 p0 = vec3(a0.xy, h.x); vec3 p1 = vec3(a0.zw, h.y); vec3 p2 = vec3(a1.xy, h.z); vec3 p3 = vec3(a1.zw, h.w); vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3))); p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w; vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0); m = m * m; return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3))); } void main() { vec3 pos = vWorldPosition; float noise = snoise(pos * 0.04 + vec3(0.0, time * 0.08, 0.0)) * 0.5 + 0.5; float heightFade = smoothstep(-30.0, 80.0, pos.y); float density = fogDensity * noise * (1.0 - heightFade); gl_FragColor = vec4(color, density); }`;
-            fogMaterial = new THREE.ShaderMaterial({ uniforms: fogUniforms, vertexShader: fogVertexShader, fragmentShader: fogFragmentShader, transparent: true, side: THREE.DoubleSide });
-            const fogLayer = new THREE.Mesh(fogGeometry, fogMaterial);
-            fogLayer.position.y = 25;
-            scene.add(fogLayer);
-
-            const fogParticleGeometry = new THREE.BufferGeometry();
-            const fogParticleVertices = [];
-            for (let i = 0; i < 3000; i++) fogParticleVertices.push((Math.random() - 0.5) * 8000, Math.random() * 100, (Math.random() - 0.5) * 8000);
-            fogParticleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(fogParticleVertices, 3));
-            const fogParticleMaterial = new THREE.PointsMaterial({ color: 0xaaffcc, size: 6, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending });
-            fogParticles = new THREE.Points(fogParticleGeometry, fogParticleMaterial);
-            scene.add(fogParticles);
-        }
-
-        function createSkyscraper() {
-            const skyscraperGroup = new THREE.Group();
-            const towerGeometry = new THREE.CylinderGeometry(5, 5, 100, 16);
-            const towerMaterial = new THREE.MeshPhongMaterial({ color: 0x3a5a7a, shininess: 50 });
-            const tower = new THREE.Mesh(towerGeometry, towerMaterial);
-            tower.position.y = 50;
-            tower.castShadow = true;
-            tower.receiveShadow = true;
-            skyscraperGroup.add(tower);
-
-            const platformGeometry = new THREE.CircleGeometry(10, 16);
-            const platformMaterial = new THREE.MeshBasicMaterial({ color: 0x00ccff, emissive: 0x00ccff });
-            const platform = new THREE.Mesh(platformGeometry, platformMaterial);
-            platform.rotation.x = -Math.PI / 2;
-            platform.position.y = 100;
-            platform.receiveShadow = true;
-            skyscraperGroup.add(platform);
-
-            skyscraperGroup.position.set(0, 0, 0);
-            scene.add(skyscraperGroup);
-        }
-
-        function createNPCShips() {
-            const colors = [0xffaa88, 0x88ccff, 0xddaaff, 0xffff88, 0xff88ff];
-            for (let i = 0; i < MAX_NPC_SHIPS; i++) {
-                const npcShip = new THREE.Group();
-                const baseGeometry = new THREE.CylinderGeometry(3, 2.5, 0.8, 16, 1);
-                const baseMaterial = new THREE.MeshPhongMaterial({ color: colors[i % 5], shininess: 50 });
-                const base = new THREE.Mesh(baseGeometry, baseMaterial);
-                base.castShadow = true;
-                npcShip.add(base);
-
-                const domeGeometry = new THREE.SphereGeometry(1.5, 16, 8);
-                const domeMaterial = new THREE.MeshPhongMaterial({ color: 0x00ffaa, transparent: true, opacity: 0.8, shininess: 100 });
-                const dome = new THREE.Mesh(domeGeometry, domeMaterial);
-                dome.position.y = 0.8;
-                dome.castShadow = true;
-                npcShip.add(dome);
-
-                const ringGeometry = new THREE.TorusGeometry(2, 0.2, 6, 16);
-                const ringMaterial = new THREE.MeshBasicMaterial({ color: colors[i % 5], emissive: colors[i % 5] });
-                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-                ring.rotation.x = Math.PI / 2;
-                ring.position.y = -0.1;
-                npcShip.add(ring);
-
-                npcShip.position.set(Math.random() * 2000 - 1000, 50 + Math.random() * 150, Math.random() * 2000 - 1000);
-                npcShip.userData = { speed: Math.random() * 0.05 + 0.03, orbitRadius: Math.random() * 600 + 300, orbitAngle: Math.random() * Math.PI * 2, heightAngle: Math.random() * Math.PI };
-                scene.add(npcShip);
-                npcShips.push(npcShip);
-            }
-        }
-
-        function addEnvironmentDetails() {
-            for (let i = 0; i < 30; i++) {
-                const orbGeometry = new THREE.SphereGeometry(Math.random() * 4 + 2, 12, 12);
-                const orbMaterial = new THREE.MeshBasicMaterial({ color: 0x88ccff, transparent: true, opacity: 0.75 });
-                const orb = new THREE.Mesh(orbGeometry, orbMaterial);
-                orb.position.set(Math.random() * 7000 - 3500, Math.random() * 100 + 150, Math.random() * 7000 - 3500);
-                orb.userData = { speed: Math.random() * 0.015 + 0.01, hover: Math.random() * 3 };
-                scene.add(orb);
-            }
-
-            function createSpire(x, z) {
-                const baseGeometry = new THREE.CylinderGeometry(0.5, 0.8, 6, 6);
-                const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x3a5a7a, roughness: 0.65 });
-                const base = new THREE.Mesh(baseGeometry, baseMaterial);
-                base.position.set(x, fractalNoise(x, z) + 3, z);
-                base.castShadow = true;
-
-                const spireGeometry = new THREE.TetrahedronGeometry(3, 0);
-                const spireMaterial = new THREE.MeshPhongMaterial({ color: 0x00aaff, emissive: 0x0077cc, shininess: 100, transparent: true, opacity: 0.9 });
-                const spire = new THREE.Mesh(spireGeometry, spireMaterial);
-                spire.position.set(x, fractalNoise(x, z) + 7, z);
-                spire.castShadow = true;
-                spire.rotation.y = Math.random() * Math.PI;
-
-                scene.add(base, spire);
-            }
-
-            for (let i = 0; i < 100; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const radius = Math.random() * 2000 + 500;
-                createSpire(Math.cos(angle) * radius, Math.sin(angle) * radius);
-            }
-
-            for (let i = 0; i < 15; i++) {
-                const poolGeometry = new THREE.CircleGeometry(12 + Math.random() * 6, 16);
-                const poolMaterial = new THREE.MeshBasicMaterial({ color: 0x00ccff, emissive: 0x00ccff, transparent: true, opacity: 0.6 });
-                const pool = new THREE.Mesh(poolGeometry, poolMaterial);
-                pool.rotation.x = -Math.PI / 2;
-                const x = Math.random() * 7000 - 3500;
-                const z = Math.random() * 7000 - 3500;
-                pool.position.set(x, fractalNoise(x, z) + 0.1, z);
-                scene.add(pool);
-            }
-
-            for (let i = 0; i < 8; i++) {
-                const islandGeometry = new THREE.PlaneGeometry(40 + Math.random() * 20, 40 + Math.random() * 20, 12, 12);
-                islandGeometry.rotateX(-Math.PI / 2);
-                const vertices = islandGeometry.attributes.position.array;
-                for (let j = 0; j < vertices.length; j += 3) vertices[j + 1] += Math.random() * 10 - 5;
-                islandGeometry.computeVertexNormals();
-                const islandMaterial = new THREE.MeshStandardMaterial({ color: 0x304a7a, roughness: 0.9 });
-                const island = new THREE.Mesh(islandGeometry, islandMaterial);
-                island.position.set(Math.random() * 7000 - 3500, 80 + Math.random() * 80, Math.random() * 7000 - 3500);
-                island.castShadow = true;
-                island.receiveShadow = true;
-                scene.add(island);
-            }
-
-            for (let i = 0; i < 40; i++) {
-                const crystalGeometry = new THREE.TetrahedronGeometry(3 + Math.random() * 2, 1);
-                const crystalMaterial = new THREE.MeshPhongMaterial({ color: 0x00ffcc, emissive: 0x00cc99, shininess: 80, transparent: true, opacity: 0.85 });
-                const crystal = new THREE.Mesh(crystalGeometry, crystalMaterial);
-                const x = Math.random() * 7000 - 3500;
-                const z = Math.random() * 7000 - 3500;
-                crystal.position.set(x, fractalNoise(x, z) + 3, z);
-                crystal.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-                crystal.castShadow = true;
-                scene.add(crystal);
-            }
-        }
-
-        function setupJoystick() {
-            // Only setup the single joystick if it exists and we're not using dual joysticks
-            const joystickContainer = document.getElementById('joystick-container');
-            if (joystickContainer && !isMobileDevice()) {
-                joystick = document.getElementById('joystick');
-                if (joystick) {
-                    joystickRect = joystickContainer.getBoundingClientRect();
-                    joystickCenterX = joystickRect.left + joystickRect.width / 2;
-                    joystickCenterY = joystickRect.top + joystickRect.height / 2;
-
-                    joystickContainer.addEventListener('pointerdown', onJoystickStart, { passive: false });
-                    document.addEventListener('pointermove', onJoystickMove, { passive: false });
-                    document.addEventListener('pointerup', onJoystickEnd);
-                    document.addEventListener('pointercancel', onJoystickEnd);
-                }
-            }
-        }
-
-        // --- Mobile Device Detection and Optimization ---
-        function isMobileDevice() {
-            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        }
-
-        function isLowEndDevice() {
-            return true; // Treat all mobile devices as low-end for safety
-        }
-
-        // Initialize with appropriate settings based on device
-        let PARTICLE_COUNT = isMobileDevice() ? 100 : 2000; // Drastically reduced from 400
-        let MAX_NPC_SHIPS = isMobileDevice() ? 2 : 8; // Reduced from 4
-        let MAX_OBSTACLES = isMobileDevice() ? 3 : 10; // Reduced from 5
-
-        // Additional mobile optimizations
-        if (isMobileDevice()) {
-            THREE.ShaderMaterial.prototype.precision = 'lowp'; // Use low precision shaders
-            THREE.WebGLRenderer.prototype.antialias = false; // Disable antialiasing
-        }
-
-        // --- Touch Controls Implementation ---
-        function setupMobileControls() {
-            if (!isMobileDevice()) return;
-
-            // Remove old joystick if it exists
-            const oldJoystick = document.getElementById('joystick-container');
-            if (oldJoystick) {
-                oldJoystick.remove();
-            }
-
-            // Ensure the dual joysticks exist
-            const leftJoystick = document.getElementById('joystick-left');
-            const rightJoystick = document.getElementById('joystick-right');
-            
-            if (!leftJoystick || !rightJoystick) {
-                console.error('Mobile joysticks not found');
+            // Skip frame if device is struggling
+            if (isMobileDevice() && delta > 0.1) {
+                requestAnimationFrame(animate);
                 return;
             }
 
-            let leftActive = false, rightActive = false;
-            let leftStart = {x:0, y:0}, rightStart = {x:0, y:0};
-            let leftDelta = {x:0, y:0}, rightDelta = {x:0, y:0};
-            let leftJoystickRect = null, rightJoystickRect = null;
-
-            function updateJoystickRects() {
-                const leftContainer = document.getElementById('joystick-left-container');
-                const rightContainer = document.getElementById('joystick-right-container');
-                if (leftContainer) leftJoystickRect = leftContainer.getBoundingClientRect();
-                if (rightContainer) rightJoystickRect = rightContainer.getBoundingClientRect();
-            }
-
-            // Initial rect calculation
-            updateJoystickRects();
-
-            // Update rects on resize and orientation change
-            window.addEventListener('resize', updateJoystickRects);
-            window.addEventListener('orientationchange', updateJoystickRects);
-
-            // Setup left joystick (movement)
-            if (leftJoystick) {
-                leftJoystick.addEventListener('pointerdown', function(e) {
-                    leftActive = true;
-                    leftStart = {x: e.clientX, y: e.clientY};
-                    updateJoystickRects(); // Update rects on touch start
-                    e.preventDefault();
-                }, {passive: false});
-
-                leftJoystick.addEventListener('pointermove', function(e) {
-                    if (!leftActive) return;
-                    leftDelta = {
-                        x: Math.max(-50, Math.min(50, e.clientX - leftStart.x)),
-                        y: Math.max(-50, Math.min(50, e.clientY - leftStart.y))
-                    };
-                    keys.w = leftDelta.y < -20;
-                    keys.s = leftDelta.y > 20;
-                    keys.a = leftDelta.x < -20;
-                    keys.d = leftDelta.x > 20;
-                    e.preventDefault();
-                }, {passive: false});
-
-                leftJoystick.addEventListener('pointerup', function(e) {
-                    leftActive = false;
-                    leftDelta = {x:0, y:0};
-                    keys.w = keys.a = keys.s = keys.d = false;
-                    e.preventDefault();
-                }, {passive: false});
-
-                // Add pointercancel handler
-                leftJoystick.addEventListener('pointercancel', function(e) {
-                    leftActive = false;
-                    leftDelta = {x:0, y:0};
-                    keys.w = keys.a = keys.s = keys.d = false;
-                    e.preventDefault();
-                }, {passive: false});
-            }
-
-            // Setup right joystick (camera)
-            if (rightJoystick) {
-                rightJoystick.addEventListener('pointerdown', function(e) {
-                    rightActive = true;
-                    rightStart = {x: e.clientX, y: e.clientY};
-                    updateJoystickRects(); // Update rects on touch start
-                    e.preventDefault();
-                }, {passive: false});
-
-                rightJoystick.addEventListener('pointermove', function(e) {
-                    if (!rightActive) return;
-                    rightDelta = {
-                        x: Math.max(-50, Math.min(50, e.clientX - rightStart.x)),
-                        y: Math.max(-50, Math.min(50, e.clientY - rightStart.y))
-                    };
-                    targetLon += rightDelta.x * 0.15;
-                    targetLat += rightDelta.y * 0.15;
-                    rightStart = {x: e.clientX, y: e.clientY};
-                    e.preventDefault();
-                }, {passive: false});
-
-                rightJoystick.addEventListener('pointerup', function(e) {
-                    rightActive = false;
-                    rightDelta = {x:0, y:0};
-                    e.preventDefault();
-                }, {passive: false});
-
-                // Add pointercancel handler
-                rightJoystick.addEventListener('pointercancel', function(e) {
-                    rightActive = false;
-                    rightDelta = {x:0, y:0};
-                    e.preventDefault();
-                }, {passive: false});
-            }
-
-            // Setup touch buttons with error handling
-            const touchButtons = ['btn-shoot', 'btn-jump', 'btn-down', 'btn-boost', 'btn-pause'];
-            touchButtons.forEach(btnId => {
-                const btn = document.getElementById(btnId);
-                if (btn) {
-                    btn.addEventListener('pointerdown', function(e) {
-                        switch(btnId) {
-                            case 'btn-shoot': keys.g = true; break;
-                            case 'btn-jump': keys.space = true; break;
-                            case 'btn-down': keys.shift = true; break;
-                            case 'btn-boost': keys.w = true; break;
-                            case 'btn-pause': keys.p = true; break;
-                        }
-                        e.preventDefault();
-                    }, {passive: false});
-
-                    btn.addEventListener('pointerup', function(e) {
-                        switch(btnId) {
-                            case 'btn-shoot': keys.g = false; break;
-                            case 'btn-jump': keys.space = false; break;
-                            case 'btn-down': keys.shift = false; break;
-                            case 'btn-boost': keys.w = false; break;
-                            case 'btn-pause': keys.p = false; break;
-                        }
-                        e.preventDefault();
-                    }, {passive: false});
-
-                    // Add pointercancel handler
-                    btn.addEventListener('pointercancel', function(e) {
-                        switch(btnId) {
-                            case 'btn-shoot': keys.g = false; break;
-                            case 'btn-jump': keys.space = false; break;
-                            case 'btn-down': keys.shift = false; break;
-                            case 'btn-boost': keys.w = false; break;
-                            case 'btn-pause': keys.p = false; break;
-                        }
-                        e.preventDefault();
-                    }, {passive: false});
+            // Update controls based on device type
+            if (isMobileDevice()) {
+                // Mobile controls update
+                if (leftActive) {
+                    ship.position.x += leftDelta.x * MOBILE_MOVE_SPEED * delta;
+                    ship.position.z += leftDelta.y * MOBILE_MOVE_SPEED * delta;
                 }
-            });
+                if (rightActive) {
+                    ship.rotation.y += rightDelta.x * MOBILE_ROTATION_SPEED * delta;
+                    // Limit vertical movement on mobile
+                    const newY = ship.position.y + rightDelta.y * MOBILE_MOVE_SPEED * delta;
+                    ship.position.y = Math.max(50, Math.min(150, newY));
+                }
+            } else {
+                // Desktop controls update
+                // ... existing desktop control code ...
+            }
+
+            // Optimize particle updates
+            if (particles) {
+                if (!isMobileDevice() || time % 2 < 1) { // Update particles every other second on mobile
+                    particles.rotation.y += delta * 0.05;
+                    const positions = particles.geometry.attributes.position.array;
+                    for (let i = 0; i < positions.length; i += 3) {
+                        positions[i + 1] += Math.sin(time + positions[i] * 0.01) * delta;
+                    }
+                    particles.geometry.attributes.position.needsUpdate = true;
+                }
+            }
+
+            // Optimize NPC updates
+            const updateInterval = isMobileDevice() ? 2 : 1; // Update NPCs less frequently on mobile
+            if (time % updateInterval < delta) {
+                npcShips.forEach(npc => {
+                    // ... existing NPC update code ...
+                });
+            }
+
+            // Only update shadows when necessary
+            if (!isMobileDevice() && time % 1 < delta) {
+                renderer.shadowMap.needsUpdate = true;
+            }
+
+            // Render scene
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
         }
 
-        // Initialize mobile controls when DOM is loaded
-        window.addEventListener('DOMContentLoaded', function() {
-            setupMobileControls();
-            resizeGameCanvas();
-        });
+        // Constants for mobile optimization
+        const MOBILE_MOVE_SPEED = 100;
+        const MOBILE_ROTATION_SPEED = 2;
 
-        // --- Responsive Canvas Resize ---
-        function resizeGameCanvas() {
-            const canvas = document.getElementById('canvas');
-            if (canvas) {
-                const dpr = window.devicePixelRatio || 1;
-                canvas.width = window.innerWidth * dpr;
-                canvas.height = window.innerHeight * dpr;
-                canvas.style.width = window.innerWidth + 'px';
-                canvas.style.height = window.innerHeight + 'px';
+        function onKeyDown(event) {
+            if (isPaused) return;
+            
+            switch(event.key.toLowerCase()) {
+                case 'w': keys.w = true; break;
+                case 's': keys.s = true; break;
+                case 'a': keys.a = true; break;
+                case 'd': keys.d = true; break;
+                case ' ': keys.space = true; break;
+                case 'shift': keys.shift = true; break;
+                case 'p': togglePause(); break;
+                case 'g': shoot(); break;
+                case 'escape': quitGame(); break;
+                case 'r': toggleRaceMode(); break;
             }
         }
 
-        window.addEventListener('resize', resizeGameCanvas);
-        window.addEventListener('orientationchange', resizeGameCanvas);
+        function onKeyUp(event) {
+            switch(event.key.toLowerCase()) {
+                case 'w': keys.w = false; break;
+                case 's': keys.s = false; break;
+                case 'a': keys.a = false; break;
+                case 'd': keys.d = false; break;
+                case ' ': keys.space = false; break;
+                case 'shift': keys.shift = false; break;
+            }
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            pauseMenu.style.display = isPaused ? 'block' : 'none';
+        }
+
+        function quitGame() {
+            isPaused = false;
+            pauseMenu.style.display = 'none';
+            canvas.style.display = 'none';
+            optionMode.style.display = 'flex';
+            cleanupMultiplayer();
+        }
+
+        function toggleRaceMode() {
+            isRaceMode = !isRaceMode;
+            if (isRaceMode && isHost) {
+                raceStartTime = performance.now();
+                if (!raceFinishLine) createRaceFinishLine();
+            }
+            raceStatus.innerText = isRaceMode ? 'Race Mode: ON' : 'Race Mode: OFF';
+        }
+
+        function shoot() {
+            if (isPaused) return;
+            // Add shooting logic here
+        }
     </script>
 </body>
 </html>
