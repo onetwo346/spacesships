@@ -1022,320 +1022,23 @@
         }
 
         function setupJoystick() {
-            joystick = document.getElementById('joystick');
+            // Only setup the single joystick if it exists and we're not using dual joysticks
             const joystickContainer = document.getElementById('joystick-container');
-            joystickRect = joystickContainer.getBoundingClientRect();
-            joystickCenterX = joystickRect.left + joystickRect.width / 2;
-            joystickCenterY = joystickRect.top + joystickRect.height / 2;
+            if (joystickContainer && !isMobileDevice()) {
+                joystick = document.getElementById('joystick');
+                if (joystick) {
+                    joystickRect = joystickContainer.getBoundingClientRect();
+                    joystickCenterX = joystickRect.left + joystickRect.width / 2;
+                    joystickCenterY = joystickRect.top + joystickRect.height / 2;
 
-            joystickContainer.addEventListener('pointerdown', onJoystickStart, { passive: false });
-            document.addEventListener('pointermove', onJoystickMove, { passive: false });
-            document.addEventListener('pointerup', onJoystickEnd);
-            document.addEventListener('pointercancel', onJoystickEnd);
-        }
-
-        function onJoystickStart(event) {
-            event.preventDefault();
-            if (!joystickActive) {
-                joystickActive = true;
-                joystickTouchId = event.pointerId;
-                joystick.style.transition = 'none';
-                updateJoystickPosition(event.clientX, event.clientY);
-            }
-        }
-
-        function onJoystickMove(event) {
-            if (joystickActive && event.pointerId === joystickTouchId) {
-                event.preventDefault();
-                updateJoystickPosition(event.clientX, event.clientY);
-            }
-        }
-
-        function onJoystickEnd(event) {
-            if (joystickActive && event.pointerId === joystickTouchId) {
-                joystickActive = false;
-                joystick.style.transition = '0.2s';
-                joystick.style.left = '25px';
-                joystick.style.top = '25px';
-                targetLon = lon;
-                targetLat = lat;
-            }
-        }
-
-        function updateJoystickPosition(clientX, clientY) {
-            joystickRect = document.getElementById('joystick-container').getBoundingClientRect();
-            joystickCenterX = joystickRect.left + joystickRect.width / 2;
-            joystickCenterY = joystickRect.top + joystickRect.height / 2;
-
-            let deltaX = clientX - joystickCenterX;
-            let deltaY = clientY - joystickCenterY;
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-            const maxRadius = joystickRect.width / 2 - joystick.offsetWidth / 2;
-            if (distance > maxRadius) {
-                deltaX = deltaX * maxRadius / distance;
-                deltaY = deltaY * maxRadius / distance;
-            }
-
-            joystick.style.left = (deltaX + joystickRect.width / 2 - joystick.offsetWidth / 2) + 'px';
-            joystick.style.top = (deltaY + joystickRect.height / 2 - joystick.offsetHeight / 2) + 'px';
-
-            targetLon += deltaX * 0.25;
-            targetLat -= deltaY * 0.25;
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            joystickRect = document.getElementById('joystick-container').getBoundingClientRect();
-            joystickCenterX = joystickRect.left + joystickRect.width / 2;
-            joystickCenterY = joystickRect.top + joystickRect.height / 2;
-        }
-
-        function onPointerDown(event) {
-            if (event.target.id !== 'joystick' && event.target.id !== 'joystick-container') {
-                isUserInteracting = true;
-                onPointerDownMouseX = event.clientX;
-                onPointerDownMouseY = event.clientY;
-                onPointerDownLon = lon;
-                onPointerDownLat = lat;
-            }
-        }
-
-        function onPointerMove(event) {
-            if (isUserInteracting) {
-                targetLon = (onPointerDownMouseX - event.clientX) * 0.25 + onPointerDownLon;
-                targetLat = (event.clientY - onPointerDownMouseY) * 0.25 + onPointerDownLat;
-            }
-        }
-
-        function onPointerUp() {
-            isUserInteracting = false;
-        }
-
-        function onKeyDown(event) {
-            switch (event.keyCode) {
-                case 37: targetLon -= 5; break;
-                case 38: targetLat += 5; break;
-                case 39: targetLon += 5; break;
-                case 40: targetLat -= 5; break;
-            }
-        }
-
-        function updateCosmicEnvironment() {
-            time += 0.012;
-            cycleTime += 0.015;
-
-            const cycleDuration = 60;
-            const dayNight = Math.sin(cycleTime * Math.PI / cycleDuration) * 0.5 + 0.5;
-            skyMaterial.uniforms.time.value = time;
-            skyMaterial.uniforms.dayNight.value = dayNight;
-            skyMaterial.uniforms.pulseIntensity.value = 0.5 * (1 - dayNight);
-            fogMaterial.uniforms.time.value = time;
-
-            cosmicLights[0].position.set(Math.cos(time) * 1000, 600 + Math.sin(time * 0.8) * 120, Math.sin(time) * 1000);
-            cosmicLights[1].position.set(Math.cos(time + 2) * 900, 650 + Math.sin(time * 0.9) * 100, Math.sin(time + 2) * 900);
-            cosmicLights[2].position.set(Math.cos(time + 4) * 800, 700 + Math.sin(time) * 80, Math.sin(time + 4) * 800);
-
-            scene.children.forEach(child => {
-                if (child.userData.speed && !child.userData.orbitRadius && !child.userData.baseY) {
-                    child.position.x += child.userData.speed;
-                    child.position.y = 150 + Math.sin(time + child.userData.hover) * 12;
-                    if (child.position.x > 3500) child.position.x = -3500;
-                    child.scale.setScalar(1 + Math.sin(time * 2 + child.userData.hover) * 0.15);
+                    joystickContainer.addEventListener('pointerdown', onJoystickStart, { passive: false });
+                    document.addEventListener('pointermove', onJoystickMove, { passive: false });
+                    document.addEventListener('pointerup', onJoystickEnd);
+                    document.addEventListener('pointercancel', onJoystickEnd);
                 }
-            });
-
-            npcShips.forEach(ship => {
-                ship.userData.orbitAngle += ship.userData.speed * 0.015;
-                ship.userData.heightAngle += ship.userData.speed * 0.008;
-                ship.position.x = Math.cos(ship.userData.orbitAngle) * ship.userData.orbitRadius;
-                ship.position.z = Math.sin(ship.userData.orbitAngle) * ship.userData.orbitRadius;
-                ship.position.y = 50 + Math.sin(ship.userData.heightAngle) * 120;
-                ship.rotation.y += 0.02;
-                if (ship.position.x > 4000) ship.position.x = -4000;
-                if (ship.position.x < -4000) ship.position.x = 4000;
-                if (ship.position.z > 4000) ship.position.z = -4000;
-                if (ship.position.z < -4000) ship.position.z = 4000;
-            });
-
-            waterfalls.forEach(waterfall => {
-                const positions = waterfall.geometry.attributes.position.array;
-                for (let i = 1; i < positions.length; i += 3) {
-                    positions[i] -= waterfall.userData.speed;
-                    if (positions[i] < fractalNoise(positions[i - 1], positions[i + 1])) {
-                        positions[i] = waterfall.userData.baseY;
-                        positions[i - 1] = waterfall.userData.baseX + (Math.random() - 0.5) * 12;
-                        positions[i + 1] = waterfall.userData.baseZ + (Math.random() - 0.5) * 12;
-                    }
-                }
-                waterfall.geometry.attributes.position.needsUpdate = true;
-            });
-
-            const fogPositions = fogParticles.geometry.attributes.position.array;
-            for (let i = 0; i < fogPositions.length; i += 3) {
-                fogPositions[i] += Math.sin(time + fogPositions[i + 1]) * 0.015;
-                fogPositions[i + 2] += Math.cos(time + fogPositions[i]) * 0.015;
-                if (fogPositions[i] > 4000) fogPositions[i] = -4000;
-                if (fogPositions[i] < -4000) fogPositions[i] = 4000;
-                if (fogPositions[i + 2] > 4000) fogPositions[i + 2] = -4000;
-                if (fogPositions[i + 2] < -4000) fogPositions[i + 2] = 4000;
-            }
-            fogParticles.geometry.attributes.position.needsUpdate = true;
-        }
-
-        function updateMovement() {
-            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-            const now = performance.now();
-            const accel = (now < boostEndTime) ? boostAccel : baseAccel;
-
-            if (keys.w) velocity.add(forward.multiplyScalar(accel));
-            if (keys.s) velocity.add(forward.multiplyScalar(-accel));
-            if (keys.a) velocity.add(right.multiplyScalar(-accel));
-            if (keys.d) velocity.add(right.multiplyScalar(accel));
-
-            if (keys.space) velocity.y += verticalSpeed;
-            if (keys.shift) velocity.y -= verticalSpeed;
-            if (!keys.space && !keys.shift && Math.abs(velocity.x) < 0.1 && Math.abs(velocity.z) < 0.1) {
-                velocity.y = Math.sin(time * 2) * 0.05;
-            }
-
-            velocity.clampLength(0, maxSpeed);
-            velocity.multiplyScalar(friction);
-            ship.position.add(velocity);
-
-            const forwardVel = velocity.dot(forward);
-            const rightVel = velocity.dot(right);
-            const maxTilt = THREE.MathUtils.degToRad(20);
-            ship.rotation.x = THREE.MathUtils.lerp(ship.rotation.x, THREE.MathUtils.clamp(forwardVel * 0.05, -maxTilt, maxTilt), 0.2);
-            ship.rotation.z = THREE.MathUtils.lerp(ship.rotation.z, THREE.MathUtils.clamp(-rightVel * 0.05, -maxTilt, maxTilt), 0.2);
-            ship.rotation.y = theta;
-
-            const offset = new THREE.Vector3(0, cameraHeight, cameraDistance).applyQuaternion(camera.quaternion);
-            camera.position.lerp(ship.position.clone().add(offset), 0.2);
-        }
-
-        function updateCamera() {
-            lon = THREE.MathUtils.lerp(lon, targetLon, 0.2);
-            lat = THREE.MathUtils.lerp(lat, targetLat, 0.2);
-            lat = Math.max(-85, Math.min(85, lat));
-
-            phi = THREE.MathUtils.degToRad(90 - lat);
-            theta = THREE.MathUtils.degToRad(lon);
-
-            const lookAt = new THREE.Vector3(
-                camera.position.x + Math.sin(phi) * Math.cos(theta),
-                camera.position.y + Math.cos(phi),
-                camera.position.z + Math.sin(phi) * Math.sin(theta)
-            );
-            camera.lookAt(lookAt);
-
-            const ground = scene.children.find(child => child.isMesh && child.geometry.type === 'PlaneGeometry');
-            if (ground) {
-                const raycaster = new THREE.Raycaster(ship.position, new THREE.Vector3(0, -1, 0), 0, 20);
-                const intersects = raycaster.intersectObject(ground);
-                if (intersects.length > 0) {
-                    const groundHeight = intersects[0].point.y + 3;
-                    if (ship.position.y < groundHeight) {
-                        ship.position.y = groundHeight;
-                        velocity.y = Math.max(0, velocity.y);
-                    }
-                }
-
-                const colors = ground.geometry.attributes.color || new THREE.Float32BufferAttribute(new Float32Array(ground.geometry.attributes.position.count * 3), 3);
-                const shipX = Math.floor((ship.position.x + 4000) / 8000 * 512);
-                const shipZ = Math.floor((ship.position.z + 4000) / 8000 * 512);
-                for (let i = 0; i < colors.count; i++) {
-                    const dx = Math.abs(i % 512 - shipX);
-                    const dz = Math.abs(Math.floor(i / 512) - shipZ);
-                    const dist = Math.sqrt(dx * dx + dz * dz);
-                    const tint = Math.max(0, 1 - dist / 40);
-                    colors.setXYZ(i, 0.12 + tint * 0.1, 0.18 + tint * 0.2, 0.29 + tint * 0.2);
-                }
-                ground.geometry.setAttribute('color', colors);
-                ground.geometry.attributes.color.needsUpdate = true;
             }
         }
-    </script>
-    <script>
-        // --- Touch Device Detection ---
-        function isTouchDevice() {
-            return (('ontouchstart' in window) || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0);
-        }
-        function showTouchUI() {
-            if (isTouchDevice()) {
-                document.querySelectorAll('.touch-only').forEach(el => el.style.display = 'block');
-            }
-        }
-        window.addEventListener('DOMContentLoaded', showTouchUI);
-        // --- Dual Joystick Implementation ---
-        let leftJoystick = document.getElementById('joystick-left');
-        let rightJoystick = document.getElementById('joystick-right');
-        let leftActive = false, rightActive = false, leftStart = {}, rightStart = {}, leftDelta = {x:0,y:0}, rightDelta = {x:0,y:0};
-        
-        // LEFT JOYSTICK: STRICTLY FOR MOVEMENT (WASD)
-        // This joystick ONLY affects movement keys. It does NOT touch camera variables.
-        if (leftJoystick) {
-            leftJoystick.addEventListener('pointerdown', function(e) {
-                leftActive = true;
-                leftStart = {x: e.clientX, y: e.clientY};
-                e.preventDefault();
-            }, {passive: false});
-            leftJoystick.addEventListener('pointermove', function(e) {
-                if (!leftActive) return;
-                leftDelta = { x: e.clientX - leftStart.x, y: e.clientY - leftStart.y };
-                // Only control WASD keys
-                keys.w = leftDelta.y < -20;
-                keys.s = leftDelta.y > 20;
-                keys.a = leftDelta.x < -20;
-                keys.d = leftDelta.x > 20;
-                e.preventDefault();
-            }, {passive: false});
-            leftJoystick.addEventListener('pointerup', function(e) {
-                leftActive = false;
-                leftDelta = {x:0,y:0};
-                keys.w = keys.a = keys.s = keys.d = false;
-                e.preventDefault();
-            }, {passive: false});
-        }
 
-        // RIGHT JOYSTICK: STRICTLY FOR CAMERA CONTROL
-        // This joystick ONLY affects camera orientation (targetLon/targetLat). It does NOT affect movement keys.
-        if (rightJoystick) {
-            rightJoystick.addEventListener('pointerdown', function(e) {
-                rightActive = true;
-                rightStart = {x: e.clientX, y: e.clientY};
-                e.preventDefault();
-            }, {passive: false});
-            rightJoystick.addEventListener('pointermove', function(e) {
-                if (!rightActive) return;
-                rightDelta = { x: e.clientX - rightStart.x, y: e.clientY - rightStart.y };
-                // Only control camera orientation
-                targetLon += rightDelta.x * 0.15;
-                targetLat += rightDelta.y * 0.15;
-                rightStart = {x: e.clientX, y: e.clientY};
-                e.preventDefault();
-            }, {passive: false});
-            rightJoystick.addEventListener('pointerup', function(e) {
-                rightActive = false;
-                rightDelta = {x:0,y:0};
-                e.preventDefault();
-            }, {passive: false});
-        }
-        // --- Touch Buttons Mapping ---
-        document.getElementById('btn-shoot').addEventListener('pointerdown', function(e){ keys.g = true; e.preventDefault(); });
-        document.getElementById('btn-shoot').addEventListener('pointerup', function(e){ keys.g = false; e.preventDefault(); });
-        document.getElementById('btn-jump').addEventListener('pointerdown', function(e){ keys.space = true; e.preventDefault(); });
-        document.getElementById('btn-jump').addEventListener('pointerup', function(e){ keys.space = false; e.preventDefault(); });
-        document.getElementById('btn-down').addEventListener('pointerdown', function(e){ keys.shift = true; e.preventDefault(); });
-        document.getElementById('btn-down').addEventListener('pointerup', function(e){ keys.shift = false; e.preventDefault(); });
-        document.getElementById('btn-boost').addEventListener('pointerdown', function(e){ keys.w = true; e.preventDefault(); });
-        document.getElementById('btn-boost').addEventListener('pointerup', function(e){ keys.w = false; e.preventDefault(); });
-        document.getElementById('btn-pause').addEventListener('pointerdown', function(e){ keys.p = true; e.preventDefault(); });
-        document.getElementById('btn-pause').addEventListener('pointerup', function(e){ keys.p = false; e.preventDefault(); });
-    </script>
-    <script>
         // --- Mobile Device Detection and Optimization ---
         function isMobileDevice() {
             return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -1356,19 +1059,44 @@
 
             // Remove old joystick if it exists
             const oldJoystick = document.getElementById('joystick-container');
-            if (oldJoystick) oldJoystick.remove();
+            if (oldJoystick) {
+                oldJoystick.remove();
+            }
 
+            // Ensure the dual joysticks exist
             const leftJoystick = document.getElementById('joystick-left');
             const rightJoystick = document.getElementById('joystick-right');
+            
+            if (!leftJoystick || !rightJoystick) {
+                console.error('Mobile joysticks not found');
+                return;
+            }
+
             let leftActive = false, rightActive = false;
             let leftStart = {x:0, y:0}, rightStart = {x:0, y:0};
             let leftDelta = {x:0, y:0}, rightDelta = {x:0, y:0};
+            let leftJoystickRect = null, rightJoystickRect = null;
+
+            function updateJoystickRects() {
+                const leftContainer = document.getElementById('joystick-left-container');
+                const rightContainer = document.getElementById('joystick-right-container');
+                if (leftContainer) leftJoystickRect = leftContainer.getBoundingClientRect();
+                if (rightContainer) rightJoystickRect = rightContainer.getBoundingClientRect();
+            }
+
+            // Initial rect calculation
+            updateJoystickRects();
+
+            // Update rects on resize and orientation change
+            window.addEventListener('resize', updateJoystickRects);
+            window.addEventListener('orientationchange', updateJoystickRects);
 
             // Setup left joystick (movement)
             if (leftJoystick) {
                 leftJoystick.addEventListener('pointerdown', function(e) {
                     leftActive = true;
                     leftStart = {x: e.clientX, y: e.clientY};
+                    updateJoystickRects(); // Update rects on touch start
                     e.preventDefault();
                 }, {passive: false});
 
@@ -1391,6 +1119,14 @@
                     keys.w = keys.a = keys.s = keys.d = false;
                     e.preventDefault();
                 }, {passive: false});
+
+                // Add pointercancel handler
+                leftJoystick.addEventListener('pointercancel', function(e) {
+                    leftActive = false;
+                    leftDelta = {x:0, y:0};
+                    keys.w = keys.a = keys.s = keys.d = false;
+                    e.preventDefault();
+                }, {passive: false});
             }
 
             // Setup right joystick (camera)
@@ -1398,6 +1134,7 @@
                 rightJoystick.addEventListener('pointerdown', function(e) {
                     rightActive = true;
                     rightStart = {x: e.clientX, y: e.clientY};
+                    updateJoystickRects(); // Update rects on touch start
                     e.preventDefault();
                 }, {passive: false});
 
@@ -1418,9 +1155,16 @@
                     rightDelta = {x:0, y:0};
                     e.preventDefault();
                 }, {passive: false});
+
+                // Add pointercancel handler
+                rightJoystick.addEventListener('pointercancel', function(e) {
+                    rightActive = false;
+                    rightDelta = {x:0, y:0};
+                    e.preventDefault();
+                }, {passive: false});
             }
 
-            // Setup touch buttons
+            // Setup touch buttons with error handling
             const touchButtons = ['btn-shoot', 'btn-jump', 'btn-down', 'btn-boost', 'btn-pause'];
             touchButtons.forEach(btnId => {
                 const btn = document.getElementById(btnId);
@@ -1437,6 +1181,18 @@
                     }, {passive: false});
 
                     btn.addEventListener('pointerup', function(e) {
+                        switch(btnId) {
+                            case 'btn-shoot': keys.g = false; break;
+                            case 'btn-jump': keys.space = false; break;
+                            case 'btn-down': keys.shift = false; break;
+                            case 'btn-boost': keys.w = false; break;
+                            case 'btn-pause': keys.p = false; break;
+                        }
+                        e.preventDefault();
+                    }, {passive: false});
+
+                    // Add pointercancel handler
+                    btn.addEventListener('pointercancel', function(e) {
                         switch(btnId) {
                             case 'btn-shoot': keys.g = false; break;
                             case 'btn-jump': keys.space = false; break;
