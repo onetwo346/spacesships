@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Cosmic Horizon: Moreland's Dominion</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -156,23 +158,35 @@
         }
         @media (orientation: landscape) {
             #joystick-container, #movement-joystick-container {
-                width: 120px;
-                height: 120px;
+                width: 180px; /* Increased from 120px */
+                height: 180px; /* Increased from 120px */
             }
             #joystick, #movement-joystick {
-                width: 60px;
-                height: 60px;
-                top: 30px;
-                left: 30px;
+                width: 90px; /* Increased from 60px */
+                height: 90px; /* Increased from 60px */
+                top: 45px; /* Adjusted for new size */
+                left: 45px; /* Adjusted for new size */
             }
             .mobile-button {
-                width: 50px;
-                height: 50px;
-                font-size: 1rem;
+                width: 70px; /* Increased from 50px */
+                height: 70px; /* Increased from 50px */
+                font-size: 1.2rem; /* Increased from 1rem */
             }
             #instructions {
-                max-width: 300px;
-                font-size: 12px;
+                max-width: 400px; /* Increased from 300px */
+                font-size: 14px; /* Increased from 12px */
+            }
+            #mobile-controls {
+                bottom: 50px !important; /* Adjusted for better positioning */
+                right: 220px !important; /* Adjusted to not overlap with camera joystick */
+            }
+            #vertical-controls {
+                bottom: 50px !important; /* Adjusted for better positioning */
+                left: 220px !important; /* Adjusted to not overlap with movement joystick */
+            }
+            #zoom-controls {
+                right: 50px !important; /* Adjusted for better positioning */
+                top: 50% !important;
             }
         }
     </style>
