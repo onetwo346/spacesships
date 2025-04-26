@@ -31,6 +31,59 @@
         #joystick { position: relative; top: 25px; left: 25px; width: 50px; height: 50px; background: radial-gradient(circle, #00d4ff, #1e90ff); border-radius: 50%; box-shadow: 0 0 10px #00d4ff; cursor: pointer; touch-action: none; }
         #movement-joystick-container { position: absolute; bottom: 30px; left: 30px; width: 100px; height: 100px; background: radial-gradient(circle, rgba(255, 255, 255, 0.3), rgba(0, 0, 50, 0.5)); border-radius: 50%; z-index: 10; touch-action: none; }
         #movement-joystick { position: relative; top: 25px; left: 25px; width: 50px; height: 50px; background: radial-gradient(circle, #ff00ff, #ff55ff); border-radius: 50%; box-shadow: 0 0 10px #ff00ff; cursor: pointer; touch-action: none; }
+        #mobile-controls { 
+            position: absolute; 
+            bottom: 30px; 
+            right: 30px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            z-index: 10; 
+        }
+        #zoom-controls {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+        }
+        .mobile-button { 
+            width: 60px; 
+            height: 60px; 
+            border-radius: 50%; 
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.3), rgba(0, 0, 50, 0.5)); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            color: #fff; 
+            font-size: 1.2rem; 
+            text-shadow: 0 0 5px #00d4ff; 
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5); 
+            touch-action: none; 
+            user-select: none; 
+        }
+        .mobile-button:active { 
+            transform: scale(0.95); 
+            box-shadow: 0 0 5px rgba(0, 212, 255, 0.3); 
+        }
+        #vertical-controls { 
+            position: absolute; 
+            left: 50%; 
+            bottom: 30px; 
+            transform: translateX(-50%); 
+            display: flex; 
+            gap: 20px; 
+            z-index: 10; 
+        }
+        #quit-button-mobile {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+        }
         #instructions { position: absolute; top: 20px; left: 20px; background: rgba(0, 0, 50, 0.7); padding: 10px 15px; border-radius: 5px; color: #fff; z-index: 10; max-width: 350px; text-shadow: 0 0 3px #00d4ff; }
         #pause-menu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 50, 0.9); padding: 20px; border-radius: 10px; z-index: 100; display: none; text-align: center; }
         #race-status { position: absolute; top: 20px; right: 20px; color: #00d4ff; font-size: 1.5rem; z-index: 10; }
@@ -49,6 +102,11 @@
                 height: 40px; 
                 top: 20px; 
                 left: 20px; 
+            }
+            .mobile-button { 
+                width: 50px; 
+                height: 50px; 
+                font-size: 1rem; 
             }
             #instructions { font-size: 14px; max-width: 250px; } 
         }
@@ -91,6 +149,21 @@
     <div id="movement-joystick-container">
         <div id="movement-joystick"></div>
     </div>
+    <div id="vertical-controls">
+        <div class="mobile-button" id="up-button">↑</div>
+        <div class="mobile-button" id="down-button">↓</div>
+    </div>
+    <div id="zoom-controls">
+        <div class="mobile-button" id="zoom-in">+</div>
+        <div class="mobile-button" id="zoom-out">-</div>
+    </div>
+    <div id="mobile-controls">
+        <div class="mobile-button" id="shoot-button">G</div>
+        <div class="mobile-button" id="warp-button">W</div>
+        <div class="mobile-button" id="race-button">R</div>
+        <div class="mobile-button" id="pause-button">P</div>
+    </div>
+    <div class="mobile-button" id="quit-button-mobile">Esc</div>
     <div id="pause-menu">
         <h2>Paused</h2>
         <div class="option-button" id="resume-button">Resume</div>
@@ -842,6 +915,57 @@
             movementJoystickCenterX = movementJoystickRect.left + movementJoystickRect.width / 2;
             movementJoystickCenterY = movementJoystickRect.top + movementJoystickRect.height / 2;
 
+            // Setup mobile buttons
+            document.getElementById('up-button').addEventListener('pointerdown', () => {
+                keys.space = true;
+                spaceHoldTime = performance.now();
+            });
+            document.getElementById('up-button').addEventListener('pointerup', () => {
+                keys.space = false;
+                const holdDuration = (performance.now() - spaceHoldTime) / 1000;
+                if (holdDuration >= 3) velocity.y += blastSpeed;
+            });
+            document.getElementById('down-button').addEventListener('pointerdown', () => keys.shift = true);
+            document.getElementById('down-button').addEventListener('pointerup', () => keys.shift = false);
+            document.getElementById('shoot-button').addEventListener('pointerdown', () => { keys.g = true; shoot(); });
+            document.getElementById('shoot-button').addEventListener('pointerup', () => keys.g = false);
+            document.getElementById('warp-button').addEventListener('pointerdown', () => {
+                const now = performance.now();
+                if (now - lastWTime < 300) {
+                    wTapCount++;
+                    if (wTapCount >= 2) boostEndTime = now + 800;
+                } else wTapCount = 1;
+                lastWTime = now;
+                keys.w = true;
+            });
+            document.getElementById('warp-button').addEventListener('pointerup', () => keys.w = false);
+            document.getElementById('race-button').addEventListener('pointerdown', () => {
+                if (!keys.r) {
+                    isRaceMode = !isRaceMode;
+                    if (isRaceMode && !raceFinishLine) {
+                        createRaceFinishLine();
+                        raceStartTime = performance.now();
+                    }
+                }
+                keys.r = true;
+            });
+            document.getElementById('race-button').addEventListener('pointerup', () => keys.r = false);
+            document.getElementById('pause-button').addEventListener('pointerdown', () => {
+                if (!keys.p) togglePause(!isPaused);
+                keys.p = true;
+            });
+            document.getElementById('pause-button').addEventListener('pointerup', () => keys.p = false);
+            document.getElementById('zoom-in').addEventListener('pointerdown', () => {
+                cameraDistance = Math.max(5, cameraDistance - 1);
+            });
+            document.getElementById('zoom-out').addEventListener('pointerdown', () => {
+                cameraDistance = Math.min(30, cameraDistance + 1);
+            });
+            document.getElementById('quit-button-mobile').addEventListener('pointerdown', () => {
+                if (!isPaused) togglePause(true);
+                else if (confirm('Quit to menu?')) quitButton.click();
+            });
+
             joystickContainer.addEventListener('pointerdown', onJoystickStart, { passive: false });
             movementJoystickContainer.addEventListener('pointerdown', onMovementJoystickStart, { passive: false });
             document.addEventListener('pointermove', onJoystickMove, { passive: false });
@@ -931,15 +1055,32 @@
             let deltaY = clientY - movementJoystickCenterY;
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
             const maxRadius = movementJoystickRect.width / 2 - movementJoystick.offsetWidth / 2;
-            if (distance > maxRadius) {
-                deltaX = deltaX * maxRadius / distance;
-                deltaY = deltaY * maxRadius / distance;
+            
+            // Improved deadzone and sensitivity
+            const deadzone = maxRadius * 0.1;
+            const sensitivity = 0.8;
+            
+            if (distance > deadzone) {
+                if (distance > maxRadius) {
+                    deltaX = deltaX * maxRadius / distance;
+                    deltaY = deltaY * maxRadius / distance;
+                }
+                
+                // Apply sensitivity curve for smoother control
+                const normalizedDistance = (distance - deadzone) / (maxRadius - deadzone);
+                const sensitivityFactor = Math.pow(normalizedDistance, sensitivity);
+                
+                deltaX *= sensitivityFactor;
+                deltaY *= sensitivityFactor;
+            } else {
+                deltaX = 0;
+                deltaY = 0;
             }
 
             movementJoystick.style.left = (deltaX + movementJoystickRect.width / 2 - movementJoystick.offsetWidth / 2) + 'px';
             movementJoystick.style.top = (deltaY + movementJoystickRect.height / 2 - movementJoystick.offsetHeight / 2) + 'px';
 
-            // Update movement keys based on joystick position
+            // Update movement keys with improved threshold
             const threshold = maxRadius * 0.3;
             keys.w = deltaY < -threshold;
             keys.s = deltaY > threshold;
