@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Cosmic Horizon: Moreland's Dominion</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body, html { overflow: hidden; width: 100%; height: 100%; font-family: 'Comic Sans MS', 'Arial', sans-serif; background: #0a0a1e; color: #fff; touch-action: none; }
+        body, html { overflow: hidden; width: 100%; height: 100%; font-family: 'Comic Sans MS', 'Arial', sans-serif; background: #0a0a1e; color: #fff; touch-action: none; -webkit-tap-highlight-color: transparent; }
         #intro, #option-mode { 
             position: absolute; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; 
             background: radial-gradient(circle at center, #1e1e3c 0%, #0a0a1e 70%); z-index: 200; animation: pulseBackground 10s infinite alternate; 
@@ -27,10 +29,52 @@
         #generated-code { font-size: 1.5rem; color: #00d4ff; text-shadow: 0 0 5px #00d4ff; margin: 10px; }
         #footer { position: absolute; bottom: 20px; width: 100%; text-align: center; font-size: 1.2rem; color: #aaaaff; text-shadow: 0 0 5px #aaaaff; letter-spacing: 2px; }
         #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; display: none; }
-        #joystick-container { position: absolute; bottom: 30px; right: 30px; width: 100px; height: 100px; background: radial-gradient(circle, rgba(255, 255, 255, 0.3), rgba(0, 0, 50, 0.5)); border-radius: 50%; z-index: 10; touch-action: none; }
-        #joystick { position: relative; top: 25px; left: 25px; width: 50px; height: 50px; background: radial-gradient(circle, #00d4ff, #1e90ff); border-radius: 50%; box-shadow: 0 0 10px #00d4ff; cursor: pointer; touch-action: none; }
-        #movement-joystick-container { position: absolute; bottom: 30px; left: 30px; width: 100px; height: 100px; background: radial-gradient(circle, rgba(255, 255, 255, 0.3), rgba(0, 0, 50, 0.5)); border-radius: 50%; z-index: 10; touch-action: none; }
-        #movement-joystick { position: relative; top: 25px; left: 25px; width: 50px; height: 50px; background: radial-gradient(circle, #ff00ff, #ff55ff); border-radius: 50%; box-shadow: 0 0 10px #ff00ff; cursor: pointer; touch-action: none; }
+        #joystick-container { 
+            position: absolute; 
+            bottom: 30px; 
+            right: 30px; 
+            width: 150px; /* Increased from 100px */
+            height: 150px; /* Increased from 100px */
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.3), rgba(0, 0, 50, 0.5)); 
+            border-radius: 50%; 
+            z-index: 10; 
+            touch-action: none; 
+        }
+        #joystick { 
+            position: relative; 
+            top: 37.5px; /* Adjusted for new size */
+            left: 37.5px; /* Adjusted for new size */
+            width: 75px; /* Increased from 50px */
+            height: 75px; /* Increased from 50px */
+            background: radial-gradient(circle, #00d4ff, #1e90ff); 
+            border-radius: 50%; 
+            box-shadow: 0 0 10px #00d4ff; 
+            cursor: pointer; 
+            touch-action: none; 
+        }
+        #movement-joystick-container { 
+            position: absolute; 
+            bottom: 30px; 
+            left: 30px; 
+            width: 150px; /* Increased from 100px */
+            height: 150px; /* Increased from 100px */
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.3), rgba(0, 0, 50, 0.5)); 
+            border-radius: 50%; 
+            z-index: 10; 
+            touch-action: none; 
+        }
+        #movement-joystick { 
+            position: relative; 
+            top: 37.5px; /* Adjusted for new size */
+            left: 37.5px; /* Adjusted for new size */
+            width: 75px; /* Increased from 50px */
+            height: 75px; /* Increased from 50px */
+            background: radial-gradient(circle, #ff00ff, #ff55ff); 
+            border-radius: 50%; 
+            box-shadow: 0 0 10px #ff00ff; 
+            cursor: pointer; 
+            touch-action: none; 
+        }
         #mobile-controls { 
             position: absolute; 
             bottom: 150px; /* Changed from 30px to 150px to move up */
@@ -109,6 +153,27 @@
                 font-size: 1rem; 
             }
             #instructions { font-size: 14px; max-width: 250px; } 
+        }
+        @media (orientation: landscape) {
+            #joystick-container, #movement-joystick-container {
+                width: 120px;
+                height: 120px;
+            }
+            #joystick, #movement-joystick {
+                width: 60px;
+                height: 60px;
+                top: 30px;
+                left: 30px;
+            }
+            .mobile-button {
+                width: 50px;
+                height: 50px;
+                font-size: 1rem;
+            }
+            #instructions {
+                max-width: 300px;
+                font-size: 12px;
+            }
         }
     </style>
 </head>
@@ -201,7 +266,15 @@
             { name: 'Tank', perk: 'High Durability', color: 0x5555ff, gun: 'Heavy', speed: 8.0 },
             { name: 'Stealth', perk: 'Fast Reload', color: 0x55ff55, gun: 'Quick', speed: 8.1 },
             { name: 'Sniper', perk: 'Long Range', color: 0xffff55, gun: 'Sniper', speed: 8.0 },
-            { name: 'Bomber', perk: 'Explosive Shots', color: 0xff55ff, gun: 'Explosive', speed: 8.2 }
+            { name: 'Bomber', perk: 'Explosive Shots', color: 0xff55ff, gun: 'Explosive', speed: 8.2 },
+            { name: 'Xenomorph', perk: 'Agile', color: 0x00ffcc, gun: 'Acid', speed: 8.5, design: 'xenomorph' },
+            { name: 'Crystalline', perk: 'Energy Shield', color: 0xcc00ff, gun: 'Crystal', speed: 7.8, design: 'crystalline' },
+            { name: 'Mechanoid', perk: 'Overdrive', color: 0xff8800, gun: 'Plasma', speed: 8.3, design: 'mechanoid' },
+            { name: 'Biotech', perk: 'Regeneration', color: 0x00ff88, gun: 'Bio', speed: 8.1, design: 'biotech' },
+            { name: 'Quantum', perk: 'Phase Shift', color: 0x00ffff, gun: 'Quantum', speed: 8.4, design: 'quantum' },
+            { name: 'Voidborn', perk: 'Dark Matter', color: 0x330033, gun: 'Void', speed: 8.6, design: 'voidborn' },
+            { name: 'Solaris', perk: 'Solar Flare', color: 0xffcc00, gun: 'Solar', speed: 8.2, design: 'solaris' },
+            { name: 'Nebula', perk: 'Star Dust', color: 0xcc00cc, gun: 'Nebula', speed: 8.0, design: 'nebula' }
         ];
         const colors = [0xaaaaaa, 0xff5555, 0x5555ff, 0x55ff55, 0xffff55, 0xff55ff];
 
@@ -329,6 +402,8 @@
 
             if (gameMode === 'multiplayer') setupMultiplayer();
             animate();
+
+            createSunMesh();
         }
 
         function setupMultiplayer() {
@@ -531,19 +606,72 @@
         function createCosmicSky() {
             const skyGeometry = new THREE.SphereGeometry(3000, 32, 32);
             skyGeometry.scale(-1, 1, 1);
-            const uniforms = { time: { value: 0 }, baseColor: { value: new THREE.Vector3(0.05, 0.1, 0.3) }, pulseIntensity: { value: 0.5 }, dayNight: { value: 0 } };
+            const uniforms = { 
+                time: { value: 0 }, 
+                baseColor: { value: new THREE.Vector3(0.05, 0.1, 0.3) }, 
+                pulseIntensity: { value: 0.5 }, 
+                dayNight: { value: 0 },
+                sunPosition: { value: new THREE.Vector3(0, 0, 0) }
+            };
             const vertexShader = `varying vec3 vWorldPosition; void main() { vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
-            const fragmentShader = `uniform float time; uniform vec3 baseColor; uniform float pulseIntensity; uniform float dayNight; varying vec3 vWorldPosition; void main() { vec3 dir = normalize(vWorldPosition); float noise = sin(dir.x * 3.0 + time) * cos(dir.y * 3.0 + time) * 0.5; vec3 nightColor = mix(baseColor, vec3(0.8, 0.4, 0.6), noise + 0.5); vec3 dayColor = mix(vec3(0.7, 0.9, 1.0), vec3(1.0, 1.0, 0.9), noise + 0.5); vec3 color = mix(nightColor, dayColor, dayNight); float pulse = sin(time * 0.5 + dir.z * 5.0) * pulseIntensity * (1.0 - dayNight); gl_FragColor = vec4(color + pulse * 0.3, 1.0); }`;
+            const fragmentShader = `
+                uniform float time;
+                uniform vec3 baseColor;
+                uniform float pulseIntensity;
+                uniform float dayNight;
+                uniform vec3 sunPosition;
+                varying vec3 vWorldPosition;
+                
+               vec3 getDayColor(vec3 dir) {
+    float sunDot = max(0.0, dot(normalize(dir), normalize(sunPosition)));
+
+    // Base vibrant blue
+    vec3 baseSkyColor = vec3(0.4, 0.85, 0.94); // #66d9ef
+
+    // Sky brightens closer to the sun
+    vec3 skyColor = mix(baseSkyColor * 0.7, baseSkyColor, pow(sunDot, 0.5)); 
+    // 0.7 dims far from sun, brighter toward sun
+
+    // Sun glow
+    float sunGlow = pow(sunDot, 30.0) * 10.0 + pow(sunDot, 4.0) * 6.0;
+    vec3 sunColor = vec3(1.0, 0.98, 0.85) * sunGlow;
+
+    return skyColor + sunColor;
+}
+
+                
+                vec3 getNightColor(vec3 dir) {
+                    float noise = sin(dir.x * 3.0 + time) * cos(dir.y * 3.0 + time) * 0.5;
+                    vec3 nightColor = mix(baseColor, vec3(0.08, 0.12, 0.22), noise + 0.5);
+                    float stars = pow(max(0.0, noise), 32.0) * (1.0 - abs(dir.y));
+                    return nightColor + stars * vec3(1.0);
+                }
+                
+                void main() {
+                    vec3 dir = normalize(vWorldPosition);
+                    vec3 dayColor = getDayColor(dir);
+                    vec3 nightColor = getNightColor(dir);
+                    float transition = smoothstep(0.2, 0.8, dayNight);
+                    vec3 color = mix(nightColor, dayColor, transition);
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `;
             skyMaterial = new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader, side: THREE.BackSide });
             const sky = new THREE.Mesh(skyGeometry, skyMaterial);
             scene.add(sky);
 
+            // Enhanced cosmic lights with day/night cycle
             for (let i = 0; i < 3; i++) {
                 const lightGeometry = new THREE.SphereGeometry(8 - i * 2, 16, 16);
-                const lightMaterial = new THREE.MeshBasicMaterial({ color: i === 0 ? 0xffaa88 : i === 1 ? 0x88ccff : 0xffff88 });
+                const lightMaterial = new THREE.MeshBasicMaterial({ 
+                    color: i === 0 ? 0xffaa88 : i === 1 ? 0x88ccff : 0xffff88,
+                    transparent: true,
+                    opacity: 0.8
+                });
                 const light = new THREE.Mesh(lightGeometry, lightMaterial);
                 scene.add(light);
                 cosmicLights.push(light);
+                
                 const pointLight = new THREE.PointLight(lightMaterial.color, 2, 1500);
                 pointLight.castShadow = true;
                 pointLight.shadow.mapSize.width = 1024;
@@ -551,13 +679,168 @@
                 light.add(pointLight);
             }
 
+            // Add directional light for day cycle
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+            sunLight.position.set(1000, 1000, 1000);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            scene.add(sunLight);
+
             const particleGeometry = new THREE.BufferGeometry();
             const particleVertices = [];
-            for (let i = 0; i < 8000; i++) particleVertices.push((Math.random() - 0.5) * 3500, Math.random() * 1500 + 50, (Math.random() - 0.5) * 3500);
+            for (let i = 0; i < 8000; i++) {
+                particleVertices.push(
+                    (Math.random() - 0.5) * 3500,
+                    Math.random() * 1500 + 50,
+                    (Math.random() - 0.5) * 3500
+                );
+            }
             particleGeometry.setAttribute('position', new THREE.Float32BufferAttribute(particleVertices, 3));
-            const particleMaterial = new THREE.PointsMaterial({ color: 0xaaaaff, size: 2, transparent: true, blending: THREE.AdditiveBlending });
+            const particleMaterial = new THREE.PointsMaterial({ 
+                color: 0xaaaaff, 
+                size: 2, 
+                transparent: true, 
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
             scene.add(new THREE.Points(particleGeometry, particleMaterial));
+            
+            // Add ambient light that changes with day/night cycle
             scene.add(new THREE.AmbientLight(0x404060, 0.6));
+        }
+
+        function updateCosmicEnvironment() {
+            time += 0.012;
+            cycleTime += 0.015;
+            const cycleDuration = 120;
+            const dayNight = Math.sin((cycleTime + Math.PI/2) * Math.PI / cycleDuration) * 0.5 + 0.5;
+            const sunAngle = (cycleTime + Math.PI/2) * Math.PI / (cycleDuration * 0.5);
+            const sunX = Math.cos(sunAngle) * 600;
+            const sunY = Math.sin(sunAngle) * 2200;
+            const sunZ = Math.sin(sunAngle * 0.5) * 600;
+            skyMaterial.uniforms.time.value = time;
+            skyMaterial.uniforms.dayNight.value = dayNight;
+            skyMaterial.uniforms.pulseIntensity.value = 0.5 * (1 - dayNight);
+            skyMaterial.uniforms.sunPosition.value.set(sunX, sunY, sunZ);
+            fogMaterial.uniforms.time.value = time;
+            // Move the sun mesh
+            if (sunMesh) {
+                sunMesh.position.set(sunX, sunY, sunZ);
+                sunMesh.visible = dayNight > 0.15;
+                sunMesh.material.opacity = 0.7 + 0.3 * dayNight;
+                sunMesh.material.emissiveIntensity = 2 + 3 * dayNight;
+            }
+            // Boost the sun's (directional light) intensity and color
+            scene.children.forEach(child => {
+                if (child.isDirectionalLight) {
+                    child.intensity = 5.0 * dayNight + 0.1; // was 2.5
+                    child.color.setRGB(1.0 * dayNight + 0.2 * (1-dayNight), 0.98 * dayNight + 0.2 * (1-dayNight), 0.85 * dayNight + 0.3 * (1-dayNight));
+                    child.position.set(sunX, sunY, sunZ);
+                }
+            });
+            // ... rest of the update code ...
+
+            // Cosmic lights fade in at night, fade out during day
+            cosmicLights.forEach((light, index) => {
+                light.material.opacity = 0.8 * (1 - dayNight * 0.9);
+                light.children[0].intensity = 2 * (1 - dayNight * 0.9);
+            });
+            scene.children.forEach(child => {
+                if (child.isAmbientLight) {
+                    child.intensity = 0.7 * (0.3 + dayNight * 0.7);
+                }
+                if (child.isPoints) {
+                    child.material.opacity = 0.8 * (1 - dayNight * 0.9);
+                    child.material.size = 2 * (1 - dayNight * 0.7);
+                }
+            });
+
+            // Enhanced day/night transitions for cosmic lights
+            cosmicLights.forEach((light, index) => {
+                const baseY = 600 + index * 50;
+                const baseRadius = 1000 - index * 100;
+                light.position.set(
+                    Math.cos(time + index * 2) * baseRadius,
+                    baseY + Math.sin(time * 0.8 + index) * 120,
+                    Math.sin(time + index * 2) * baseRadius
+                );
+                // Much more pronounced day/night transition for lights
+                light.material.opacity = 0.8 * (1 - dayNight * 0.9);
+                light.children[0].intensity = 2 * (1 - dayNight * 0.9);
+            });
+
+            // Much brighter ambient lighting during day
+            scene.children.forEach(child => {
+                if (child.isAmbientLight) {
+                    child.intensity = 1.0 * (0.2 + dayNight * 0.8);
+                }
+            });
+
+            // Enhanced particle effects for day/night cycle
+            scene.children.forEach(child => {
+                if (child.isPoints) {
+                    // Stars completely invisible during day
+                    child.material.opacity = 0.8 * (1 - dayNight);
+                    child.material.size = 2 * (1 - dayNight * 0.8);
+                }
+            });
+
+            // Rest of the existing update code...
+            scene.children.forEach(child => {
+                if (child.userData.speed && !child.userData.orbitRadius && !child.userData.baseY) {
+                    child.position.x += child.userData.speed;
+                    child.position.y = 150 + Math.sin(time + child.userData.hover) * 12;
+                    if (child.position.x > 3500) child.position.x = -3500;
+                    child.scale.setScalar(1 + Math.sin(time * 2 + child.userData.hover) * 0.15);
+                }
+            });
+
+            npcShips.forEach(ship => {
+                ship.userData.orbitAngle += ship.userData.speed * 0.015;
+                ship.userData.heightAngle += ship.userData.speed * 0.008;
+                ship.position.x = Math.cos(ship.userData.orbitAngle) * ship.userData.orbitRadius;
+                ship.position.z = Math.sin(ship.userData.orbitAngle) * ship.userData.orbitRadius;
+                ship.position.y = 50 + Math.sin(ship.userData.heightAngle) * 120;
+                ship.rotation.y += 0.02;
+                if (ship.position.x > 4000) ship.position.x = -4000;
+                if (ship.position.x < -4000) ship.position.x = 4000;
+                if (ship.position.z > 4000) ship.position.z = -4000;
+                if (ship.position.z < -4000) ship.position.z = 4000;
+            });
+
+            waterfalls.forEach(waterfall => {
+                const positions = waterfall.geometry.attributes.position.array;
+                for (let i = 1; i < positions.length; i += 3) {
+                    positions[i] -= waterfall.userData.speed;
+                    if (positions[i] < fractalNoise(positions[i - 1], positions[i + 1])) {
+                        positions[i] = waterfall.userData.baseY;
+                        positions[i - 1] = waterfall.userData.baseX + (Math.random() - 0.5) * 12;
+                        positions[i + 1] = waterfall.userData.baseZ + (Math.random() - 0.5) * 12;
+                    }
+                }
+                waterfall.geometry.attributes.position.needsUpdate = true;
+            });
+
+            const fogPositions = fogParticles.geometry.attributes.position.array;
+            for (let i = 0; i < fogPositions.length; i += 3) {
+                fogPositions[i] += Math.sin(time + fogPositions[i + 1]) * 0.015;
+                fogPositions[i + 2] += Math.cos(time + fogPositions[i]) * 0.015;
+                if (fogPositions[i] > 4000) fogPositions[i] = -4000;
+                if (fogPositions[i] < -4000) fogPositions[i] = 4000;
+                if (fogPositions[i + 2] > 4000) fogPositions[i + 2] = -4000;
+                if (fogPositions[i + 2] < -4000) fogPositions[i + 2] = 4000;
+            }
+            fogParticles.geometry.attributes.position.needsUpdate = true;
+
+            // Find the sunLight (DirectionalLight) and update its intensity and color to match the day/night cycle
+            scene.children.forEach(child => {
+                if (child.isDirectionalLight) {
+                    child.intensity = 1.2 * dayNight + 0.1;
+                    child.color.setRGB(1.0 * dayNight + 0.2 * (1-dayNight), 0.98 * dayNight + 0.2 * (1-dayNight), 0.85 * dayNight + 0.3 * (1-dayNight));
+                    child.position.set(sunX, sunY, sunZ);
+                }
+            });
         }
 
         function createTerrain() {
@@ -584,25 +867,249 @@
 
         function createShip() {
             const shipGroup = new THREE.Group();
-            const baseGeometry = new THREE.CylinderGeometry(3, 2.5, 0.8, 16, 1);
-            const baseMaterial = new THREE.MeshPhongMaterial({ color: selectedColor, shininess: 50 });
-            const base = new THREE.Mesh(baseGeometry, baseMaterial);
-            base.castShadow = true;
-            shipGroup.add(base);
+            const shipData = ships[selectedShip];
+            
+            if (shipData.design === 'xenomorph') {
+                // Xenomorph design - sleek, organic look
+                const bodyGeometry = new THREE.CylinderGeometry(2.5, 3, 1.2, 8, 1);
+                const bodyMaterial = new THREE.MeshPhongMaterial({ color: shipData.color, shininess: 80 });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.castShadow = true;
+                shipGroup.add(body);
 
-            const domeGeometry = new THREE.SphereGeometry(1.5, 16, 8);
-            const domeMaterial = new THREE.MeshPhongMaterial({ color: 0x00ffaa, transparent: true, opacity: 0.8, shininess: 100 });
-            const dome = new THREE.Mesh(domeGeometry, domeMaterial);
-            dome.position.y = 0.8;
-            dome.castShadow = true;
-            shipGroup.add(dome);
+                const headGeometry = new THREE.ConeGeometry(1.5, 2, 8);
+                const headMaterial = new THREE.MeshPhongMaterial({ color: shipData.color, shininess: 100 });
+                const head = new THREE.Mesh(headGeometry, headMaterial);
+                head.position.y = 1.2;
+                head.castShadow = true;
+                shipGroup.add(head);
 
-            const ringGeometry = new THREE.TorusGeometry(2, 0.2, 6, 16);
-            const ringMaterial = new THREE.MeshBasicMaterial({ color: selectedColor, emissive: selectedColor });
-            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-            ring.rotation.x = Math.PI / 2;
-            ring.position.y = -0.1;
-            shipGroup.add(ring);
+                const wingsGeometry = new THREE.PlaneGeometry(4, 1.5, 1, 1);
+                const wingsMaterial = new THREE.MeshPhongMaterial({ color: shipData.color, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+                const leftWing = new THREE.Mesh(wingsGeometry, wingsMaterial);
+                const rightWing = new THREE.Mesh(wingsGeometry, wingsMaterial);
+                leftWing.rotation.z = Math.PI / 2;
+                rightWing.rotation.z = -Math.PI / 2;
+                leftWing.position.set(-2, 0, 0);
+                rightWing.position.set(2, 0, 0);
+                shipGroup.add(leftWing, rightWing);
+
+            } else if (shipData.design === 'crystalline') {
+                // Crystalline design - geometric, faceted look
+                const crystalGeometry = new THREE.OctahedronGeometry(2, 1);
+                const crystalMaterial = new THREE.MeshPhongMaterial({ 
+                    color: shipData.color, 
+                    shininess: 100, 
+                    transparent: true, 
+                    opacity: 0.9,
+                    emissive: shipData.color,
+                    emissiveIntensity: 0.5
+                });
+                const crystal = new THREE.Mesh(crystalGeometry, crystalMaterial);
+                crystal.castShadow = true;
+                shipGroup.add(crystal);
+
+                const ringGeometry = new THREE.TorusGeometry(3, 0.3, 8, 16);
+                const ringMaterial = new THREE.MeshBasicMaterial({ 
+                    color: shipData.color,
+                    transparent: true,
+                    opacity: 0.7,
+                    emissive: shipData.color,
+                    emissiveIntensity: 0.3
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.x = Math.PI / 2;
+                shipGroup.add(ring);
+
+            } else if (shipData.design === 'mechanoid') {
+                // Mechanoid design - mechanical, angular look
+                const baseGeometry = new THREE.BoxGeometry(4, 1.5, 3);
+                const baseMaterial = new THREE.MeshPhongMaterial({ color: shipData.color, shininess: 50 });
+                const base = new THREE.Mesh(baseGeometry, baseMaterial);
+                base.castShadow = true;
+                shipGroup.add(base);
+
+                const thrusterGeometry = new THREE.CylinderGeometry(0.8, 1, 2, 8);
+                const thrusterMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.5 });
+                const leftThruster = new THREE.Mesh(thrusterGeometry, thrusterMaterial);
+                const rightThruster = new THREE.Mesh(thrusterGeometry, thrusterMaterial);
+                leftThruster.position.set(-1.5, -1, 0);
+                rightThruster.position.set(1.5, -1, 0);
+                shipGroup.add(leftThruster, rightThruster);
+
+                const cockpitGeometry = new THREE.SphereGeometry(1.2, 16, 8);
+                const cockpitMaterial = new THREE.MeshPhongMaterial({ color: 0x00ffff, transparent: true, opacity: 0.8 });
+                const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+                cockpit.position.y = 1.5;
+                shipGroup.add(cockpit);
+
+            } else if (shipData.design === 'biotech') {
+                // Biotech design - organic, flowing look
+                const bodyGeometry = new THREE.SphereGeometry(2, 16, 16);
+                const bodyMaterial = new THREE.MeshPhongMaterial({ 
+                    color: shipData.color, 
+                    shininess: 60,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.castShadow = true;
+                shipGroup.add(body);
+
+                const tendrilsGeometry = new THREE.CylinderGeometry(0.2, 0.4, 3, 8);
+                const tendrilsMaterial = new THREE.MeshPhongMaterial({ color: shipData.color });
+                for (let i = 0; i < 4; i++) {
+                    const tendril = new THREE.Mesh(tendrilsGeometry, tendrilsMaterial);
+                    const angle = (i / 4) * Math.PI * 2;
+                    tendril.position.set(Math.cos(angle) * 2, 0, Math.sin(angle) * 2);
+                    tendril.rotation.z = angle;
+                    shipGroup.add(tendril);
+                }
+
+            } else if (shipData.design === 'quantum') {
+                // Quantum design - ethereal, phase-shifting look
+                const coreGeometry = new THREE.IcosahedronGeometry(2, 1);
+                const coreMaterial = new THREE.MeshPhongMaterial({ 
+                    color: shipData.color,
+                    shininess: 100,
+                    transparent: true,
+                    opacity: 0.7,
+                    emissive: shipData.color,
+                    emissiveIntensity: 0.5
+                });
+                const core = new THREE.Mesh(coreGeometry, coreMaterial);
+                core.castShadow = true;
+                shipGroup.add(core);
+
+                const phaseRings = [];
+                for (let i = 0; i < 3; i++) {
+                    const ringGeometry = new THREE.TorusGeometry(2.5 + i * 0.5, 0.1, 8, 32);
+                    const ringMaterial = new THREE.MeshBasicMaterial({
+                        color: shipData.color,
+                        transparent: true,
+                        opacity: 0.5,
+                        side: THREE.DoubleSide
+                    });
+                    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                    ring.rotation.x = Math.PI / 2;
+                    ring.position.y = i * 0.3;
+                    phaseRings.push(ring);
+                    shipGroup.add(ring);
+                }
+
+            } else if (shipData.design === 'voidborn') {
+                // Voidborn design - dark, ominous look
+                const bodyGeometry = new THREE.DodecahedronGeometry(2, 0);
+                const bodyMaterial = new THREE.MeshPhongMaterial({ 
+                    color: shipData.color,
+                    shininess: 30,
+                    emissive: 0x000000,
+                    emissiveIntensity: 0.5
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.castShadow = true;
+                shipGroup.add(body);
+
+                const voidTendrils = [];
+                for (let i = 0; i < 6; i++) {
+                    const tendrilGeometry = new THREE.CylinderGeometry(0.1, 0.3, 3, 8);
+                    const tendrilMaterial = new THREE.MeshPhongMaterial({
+                        color: shipData.color,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    const tendril = new THREE.Mesh(tendrilGeometry, tendrilMaterial);
+                    const angle = (i / 6) * Math.PI * 2;
+                    tendril.position.set(Math.cos(angle) * 2, 0, Math.sin(angle) * 2);
+                    tendril.rotation.z = angle;
+                    voidTendrils.push(tendril);
+                    shipGroup.add(tendril);
+                }
+
+            } else if (shipData.design === 'solaris') {
+                // Solaris design - radiant, sun-like look
+                const sunCoreGeometry = new THREE.SphereGeometry(2, 32, 32);
+                const sunCoreMaterial = new THREE.MeshPhongMaterial({
+                    color: shipData.color,
+                    emissive: shipData.color,
+                    emissiveIntensity: 0.8,
+                    shininess: 100
+                });
+                const sunCore = new THREE.Mesh(sunCoreGeometry, sunCoreMaterial);
+                sunCore.castShadow = true;
+                shipGroup.add(sunCore);
+
+                const solarFlareGeometry = new THREE.ConeGeometry(3, 1, 8);
+                const solarFlareMaterial = new THREE.MeshBasicMaterial({
+                    color: shipData.color,
+                    transparent: true,
+                    opacity: 0.6,
+                    side: THREE.DoubleSide
+                });
+                for (let i = 0; i < 8; i++) {
+                    const flare = new THREE.Mesh(solarFlareGeometry, solarFlareMaterial);
+                    const angle = (i / 8) * Math.PI * 2;
+                    flare.position.set(Math.cos(angle) * 2, 0, Math.sin(angle) * 2);
+                    flare.rotation.y = angle;
+                    shipGroup.add(flare);
+                }
+
+            } else if (shipData.design === 'nebula') {
+                // Nebula design - cosmic, starry look
+                const nebulaCoreGeometry = new THREE.OctahedronGeometry(1.5, 1);
+                const nebulaCoreMaterial = new THREE.MeshPhongMaterial({
+                    color: shipData.color,
+                    transparent: true,
+                    opacity: 0.9,
+                    emissive: shipData.color,
+                    emissiveIntensity: 0.4
+                });
+                const nebulaCore = new THREE.Mesh(nebulaCoreGeometry, nebulaCoreMaterial);
+                nebulaCore.castShadow = true;
+                shipGroup.add(nebulaCore);
+
+                const starPoints = [];
+                for (let i = 0; i < 12; i++) {
+                    const starGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+                    const starMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    const star = new THREE.Mesh(starGeometry, starMaterial);
+                    const angle = (i / 12) * Math.PI * 2;
+                    const radius = 2 + Math.random() * 0.5;
+                    star.position.set(
+                        Math.cos(angle) * radius,
+                        (Math.random() - 0.5) * 0.5,
+                        Math.sin(angle) * radius
+                    );
+                    starPoints.push(star);
+                    shipGroup.add(star);
+                }
+
+            } else {
+                // Default ship design (existing ships)
+                const baseGeometry = new THREE.CylinderGeometry(3, 2.5, 0.8, 16, 1);
+                const baseMaterial = new THREE.MeshPhongMaterial({ color: shipData.color, shininess: 50 });
+                const base = new THREE.Mesh(baseGeometry, baseMaterial);
+                base.castShadow = true;
+                shipGroup.add(base);
+
+                const domeGeometry = new THREE.SphereGeometry(1.5, 16, 8);
+                const domeMaterial = new THREE.MeshPhongMaterial({ color: 0x00ffaa, transparent: true, opacity: 0.8, shininess: 100 });
+                const dome = new THREE.Mesh(domeGeometry, domeMaterial);
+                dome.position.y = 0.8;
+                dome.castShadow = true;
+                shipGroup.add(dome);
+
+                const ringGeometry = new THREE.TorusGeometry(2, 0.2, 6, 16);
+                const ringMaterial = new THREE.MeshBasicMaterial({ color: shipData.color, emissive: shipData.color });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.x = Math.PI / 2;
+                ring.position.y = -0.1;
+                shipGroup.add(ring);
+            }
 
             if (gameMode === 'multiplayer' && gameCode) {
                 const plateGeometry = new THREE.PlaneGeometry(2, 0.5);
@@ -628,7 +1135,12 @@
             }
 
             shipGroup.position.set(0, 100, 0);
-            shipGroup.userData = { health: ships[selectedShip].perk === 'High Durability' ? 2 : 1, lastShot: 0, gunType: ships[selectedShip].gun };
+            shipGroup.userData = { 
+                health: ships[selectedShip].perk === 'High Durability' ? 2 : 
+                        ships[selectedShip].perk === 'Energy Shield' ? 1.5 : 1, 
+                lastShot: 0, 
+                gunType: ships[selectedShip].gun 
+            };
             scene.add(shipGroup);
             ship = shipGroup;
         }
@@ -1034,14 +1546,39 @@
             let deltaY = clientY - joystickCenterY;
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
             const maxRadius = joystickRect.width / 2 - joystick.offsetWidth / 2;
-            if (distance > maxRadius) {
-                deltaX = deltaX * maxRadius / distance;
-                deltaY = deltaY * maxRadius / distance;
+            
+            // Improved deadzone and sensitivity for camera control
+            const deadzone = maxRadius * 0.15;
+            const sensitivity = 0.6;
+            
+            if (distance > deadzone) {
+                if (distance > maxRadius) {
+                    deltaX = deltaX * maxRadius / distance;
+                    deltaY = deltaY * maxRadius / distance;
+                }
+                
+                const normalizedDistance = (distance - deadzone) / (maxRadius - deadzone);
+                const sensitivityFactor = Math.pow(normalizedDistance, sensitivity);
+                
+                const easing = 0.1;
+                deltaX = deltaX * sensitivityFactor * easing;
+                deltaY = deltaY * sensitivityFactor * easing;
+            } else {
+                deltaX = 0;
+                deltaY = 0;
             }
 
-            joystick.style.left = (deltaX + joystickRect.width / 2 - joystick.offsetWidth / 2) + 'px';
-            joystick.style.top = (deltaY + joystickRect.height / 2 - joystick.offsetHeight / 2) + 'px';
+            // Smooth joystick movement
+            const currentLeft = parseFloat(joystick.style.left) || joystickRect.width / 2 - joystick.offsetWidth / 2;
+            const currentTop = parseFloat(joystick.style.top) || joystickRect.height / 2 - joystick.offsetHeight / 2;
+            
+            const targetLeft = deltaX + joystickRect.width / 2 - joystick.offsetWidth / 2;
+            const targetTop = deltaY + joystickRect.height / 2 - joystick.offsetHeight / 2;
+            
+            joystick.style.left = (currentLeft + (targetLeft - currentLeft) * 0.3) + 'px';
+            joystick.style.top = (currentTop + (targetTop - currentTop) * 0.3) + 'px';
 
+            // Update camera rotation
             targetLon += deltaX * 0.25;
             targetLat -= deltaY * 0.25;
         }
@@ -1056,9 +1593,9 @@
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
             const maxRadius = movementJoystickRect.width / 2 - movementJoystick.offsetWidth / 2;
             
-            // Improved deadzone and sensitivity
-            const deadzone = maxRadius * 0.1;
-            const sensitivity = 0.8;
+            // Optimized deadzone and sensitivity for mobile movement
+            const deadzone = maxRadius * 0.1; // Reduced deadzone for more responsive control
+            const sensitivity = 0.8; // Increased sensitivity for better control
             
             if (distance > deadzone) {
                 if (distance > maxRadius) {
@@ -1066,39 +1603,153 @@
                     deltaY = deltaY * maxRadius / distance;
                 }
                 
-                // Apply sensitivity curve for smoother control
+                // Improved sensitivity curve for smoother control
                 const normalizedDistance = (distance - deadzone) / (maxRadius - deadzone);
                 const sensitivityFactor = Math.pow(normalizedDistance, sensitivity);
                 
-                deltaX *= sensitivityFactor;
-                deltaY *= sensitivityFactor;
+                // Smoother easing for better movement feel
+                const easing = 0.15;
+                deltaX = deltaX * sensitivityFactor * easing;
+                deltaY = deltaY * sensitivityFactor * easing;
             } else {
                 deltaX = 0;
                 deltaY = 0;
             }
 
-            movementJoystick.style.left = (deltaX + movementJoystickRect.width / 2 - movementJoystick.offsetWidth / 2) + 'px';
-            movementJoystick.style.top = (deltaY + movementJoystickRect.height / 2 - movementJoystick.offsetHeight / 2) + 'px';
+            // Enhanced joystick visual feedback
+            const currentLeft = parseFloat(movementJoystick.style.left) || movementJoystickRect.width / 2 - movementJoystick.offsetWidth / 2;
+            const currentTop = parseFloat(movementJoystick.style.top) || movementJoystickRect.height / 2 - movementJoystick.offsetHeight / 2;
+            
+            const targetLeft = deltaX + movementJoystickRect.width / 2 - movementJoystick.offsetWidth / 2;
+            const targetTop = deltaY + movementJoystickRect.height / 2 - movementJoystick.offsetHeight / 2;
+            
+            // Smoother joystick movement with improved interpolation
+            movementJoystick.style.left = (currentLeft + (targetLeft - currentLeft) * 0.4) + 'px';
+            movementJoystick.style.top = (currentTop + (targetTop - currentTop) * 0.4) + 'px';
 
-            // Update movement keys with improved threshold
-            const threshold = maxRadius * 0.3;
+            // Improved movement threshold calculation
+            const threshold = maxRadius * 0.2; // Reduced threshold for more responsive movement
+            
+            // Store previous key states for smooth transitions
+            const previousKeys = { ...keys };
+            
+            // Update movement keys with improved responsiveness
             keys.w = deltaY < -threshold;
             keys.s = deltaY > threshold;
             keys.a = deltaX < -threshold;
             keys.d = deltaX > threshold;
+            
+            // Enhanced movement smoothing
+            if (previousKeys.w !== keys.w || previousKeys.s !== keys.s || 
+                previousKeys.a !== keys.a || previousKeys.d !== keys.d) {
+                // Gradual velocity reduction for smoother direction changes
+                velocity.multiplyScalar(0.7);
+            }
+            
+            // Add slight movement even when near threshold for smoother control
+            if (Math.abs(deltaY) > threshold * 0.8) {
+                const direction = deltaY < 0 ? 1 : -1;
+                velocity.z += direction * baseAccel * 0.5;
+            }
+            if (Math.abs(deltaX) > threshold * 0.8) {
+                const direction = deltaX < 0 ? -1 : 1;
+                velocity.x += direction * baseAccel * 0.5;
+            }
         }
 
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            joystickRect = document.getElementById('joystick-container').getBoundingClientRect();
+            
+            // Update joystick positions based on orientation
+            updateJoystickPositions();
+        }
+
+        function updateJoystickPositions() {
+            const isLandscape = window.innerWidth > window.innerHeight;
+            
+            // Get joystick containers
+            const movementContainer = document.getElementById('movement-joystick-container');
+            const cameraContainer = document.getElementById('joystick-container');
+            
+            if (isLandscape) {
+                // Landscape mode positions
+                movementContainer.style.bottom = '30px';
+                movementContainer.style.left = '30px';
+                cameraContainer.style.bottom = '30px';
+                cameraContainer.style.right = '30px';
+                
+                // Adjust mobile controls for landscape
+                document.getElementById('mobile-controls').style.bottom = '30px';
+                document.getElementById('mobile-controls').style.right = '180px'; // Adjusted to not overlap with camera joystick
+                document.getElementById('vertical-controls').style.bottom = '30px';
+                document.getElementById('vertical-controls').style.left = '180px'; // Adjusted to not overlap with movement joystick
+                document.getElementById('zoom-controls').style.right = '30px';
+                document.getElementById('zoom-controls').style.top = '50%';
+            } else {
+                // Portrait mode positions (default)
+                movementContainer.style.bottom = '30px';
+                movementContainer.style.left = '30px';
+                cameraContainer.style.bottom = '30px';
+                cameraContainer.style.right = '30px';
+                
+                // Reset mobile controls to portrait positions
+                document.getElementById('mobile-controls').style.bottom = '150px';
+                document.getElementById('mobile-controls').style.right = '30px';
+                document.getElementById('vertical-controls').style.bottom = '30px';
+                document.getElementById('vertical-controls').style.left = '50%';
+                document.getElementById('zoom-controls').style.right = '30px';
+                document.getElementById('zoom-controls').style.top = '30%';
+            }
+            
+            // Update joystick rects after position changes
+            joystickRect = cameraContainer.getBoundingClientRect();
             joystickCenterX = joystickRect.left + joystickRect.width / 2;
             joystickCenterY = joystickRect.top + joystickRect.height / 2;
-            movementJoystickRect = document.getElementById('movement-joystick-container').getBoundingClientRect();
+            
+            movementJoystickRect = movementContainer.getBoundingClientRect();
             movementJoystickCenterX = movementJoystickRect.left + movementJoystickRect.width / 2;
             movementJoystickCenterY = movementJoystickRect.top + movementJoystickRect.height / 2;
         }
+
+        // Add orientation change listener
+        window.addEventListener('orientationchange', () => {
+            // Small delay to ensure the orientation change is complete
+            setTimeout(updateJoystickPositions, 100);
+        });
+
+        // Add resize listener for devices that don't trigger orientationchange
+        window.addEventListener('resize', () => {
+            updateJoystickPositions();
+        });
+
+        // Update CSS for better landscape support
+        const style = document.createElement('style');
+        style.textContent = `
+            @media (orientation: landscape) {
+                #joystick-container, #movement-joystick-container {
+                    width: 120px;
+                    height: 120px;
+                }
+                #joystick, #movement-joystick {
+                    width: 60px;
+                    height: 60px;
+                    top: 30px;
+                    left: 30px;
+                }
+                .mobile-button {
+                    width: 50px;
+                    height: 50px;
+                    font-size: 1rem;
+                }
+                #instructions {
+                    max-width: 300px;
+                    font-size: 12px;
+                }
+            }
+        `;
+        document.head.appendChild(style);
 
         function onPointerDown(event) {
             if (event.target.id !== 'joystick' && event.target.id !== 'joystick-container') {
@@ -1128,68 +1779,6 @@
                 case 39: targetLon += 5; break;
                 case 40: targetLat -= 5; break;
             }
-        }
-
-        function updateCosmicEnvironment() {
-            time += 0.012;
-            cycleTime += 0.015;
-
-            const cycleDuration = 60;
-            const dayNight = Math.sin(cycleTime * Math.PI / cycleDuration) * 0.5 + 0.5;
-            skyMaterial.uniforms.time.value = time;
-            skyMaterial.uniforms.dayNight.value = dayNight;
-            skyMaterial.uniforms.pulseIntensity.value = 0.5 * (1 - dayNight);
-            fogMaterial.uniforms.time.value = time;
-
-            cosmicLights[0].position.set(Math.cos(time) * 1000, 600 + Math.sin(time * 0.8) * 120, Math.sin(time) * 1000);
-            cosmicLights[1].position.set(Math.cos(time + 2) * 900, 650 + Math.sin(time * 0.9) * 100, Math.sin(time + 2) * 900);
-            cosmicLights[2].position.set(Math.cos(time + 4) * 800, 700 + Math.sin(time) * 80, Math.sin(time + 4) * 800);
-
-            scene.children.forEach(child => {
-                if (child.userData.speed && !child.userData.orbitRadius && !child.userData.baseY) {
-                    child.position.x += child.userData.speed;
-                    child.position.y = 150 + Math.sin(time + child.userData.hover) * 12;
-                    if (child.position.x > 3500) child.position.x = -3500;
-                    child.scale.setScalar(1 + Math.sin(time * 2 + child.userData.hover) * 0.15);
-                }
-            });
-
-            npcShips.forEach(ship => {
-                ship.userData.orbitAngle += ship.userData.speed * 0.015;
-                ship.userData.heightAngle += ship.userData.speed * 0.008;
-                ship.position.x = Math.cos(ship.userData.orbitAngle) * ship.userData.orbitRadius;
-                ship.position.z = Math.sin(ship.userData.orbitAngle) * ship.userData.orbitRadius;
-                ship.position.y = 50 + Math.sin(ship.userData.heightAngle) * 120;
-                ship.rotation.y += 0.02;
-                if (ship.position.x > 4000) ship.position.x = -4000;
-                if (ship.position.x < -4000) ship.position.x = 4000;
-                if (ship.position.z > 4000) ship.position.z = -4000;
-                if (ship.position.z < -4000) ship.position.z = 4000;
-            });
-
-            waterfalls.forEach(waterfall => {
-                const positions = waterfall.geometry.attributes.position.array;
-                for (let i = 1; i < positions.length; i += 3) {
-                    positions[i] -= waterfall.userData.speed;
-                    if (positions[i] < fractalNoise(positions[i - 1], positions[i + 1])) {
-                        positions[i] = waterfall.userData.baseY;
-                        positions[i - 1] = waterfall.userData.baseX + (Math.random() - 0.5) * 12;
-                        positions[i + 1] = waterfall.userData.baseZ + (Math.random() - 0.5) * 12;
-                    }
-                }
-                waterfall.geometry.attributes.position.needsUpdate = true;
-            });
-
-            const fogPositions = fogParticles.geometry.attributes.position.array;
-            for (let i = 0; i < fogPositions.length; i += 3) {
-                fogPositions[i] += Math.sin(time + fogPositions[i + 1]) * 0.015;
-                fogPositions[i + 2] += Math.cos(time + fogPositions[i]) * 0.015;
-                if (fogPositions[i] > 4000) fogPositions[i] = -4000;
-                if (fogPositions[i] < -4000) fogPositions[i] = 4000;
-                if (fogPositions[i + 2] > 4000) fogPositions[i + 2] = -4000;
-                if (fogPositions[i + 2] < -4000) fogPositions[i + 2] = 4000;
-            }
-            fogParticles.geometry.attributes.position.needsUpdate = true;
         }
 
         function updateMovement() {
@@ -1264,6 +1853,22 @@
                 ground.geometry.setAttribute('color', colors);
                 ground.geometry.attributes.color.needsUpdate = true;
             }
+        }
+
+        // 1. Add a visible, glowing sun mesh to the scene
+        let sunMesh;
+        function createSunMesh() {
+            const sunGeometry = new THREE.SphereGeometry(150, 64, 64); // Larger sun
+            const sunMaterial = new THREE.MeshBasicMaterial({
+                color: 0xFFFFEE,
+                emissive: 0xFFFFCC,
+                emissiveIntensity: 100, // Super bright!
+                transparent: true,
+                opacity: 1
+            });
+            sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+            sunMesh.renderOrder = 9999;
+            scene.add(sunMesh);
         }
     </script>
 </body>
